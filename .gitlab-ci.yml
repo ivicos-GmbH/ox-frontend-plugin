@@ -1,0 +1,23 @@
+include:
+  - project: 'sre/ci-building-blocks'
+    file: '/nodejs.yml'
+
+variables:
+  OX_COMPONENT: "frontend-plugin-example"
+  ALLURE_PUBLISH_REPORT: "true"
+  REGISTRY: "registry.dev.oxui.de"
+  KUBE_INGRESS_BASE_DOMAIN: "dev.oxui.de"
+  E2E_TEST_METRICS_URL: http://e2e-test-metrics.e2e-test-metrics-main.svc.cluster.local
+  PROVISIONING_URL: https://appsuite-main.dev.oxui.de/
+
+e2e codeceptjs preview:
+  image: registry.gitlab.open-xchange.com/appsuite/web-foundation/frontend-plugin-example/e2e:$TAG_NAME
+  extends:
+    - .e2e-codeceptjs-preview
+  tags:
+    - e2e-hetzner
+  timeout: 10 minutes
+  before_script:
+    - !reference [.e2e-codeceptjs-preview, before_script]
+    - export E2E_ADMIN_PW=$ADMIN_PW
+    - export LAUNCH_URL=https://$PREVIEW_APP_NAME.dev.oxui.de/

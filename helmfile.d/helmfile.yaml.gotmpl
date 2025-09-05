@@ -1,0 +1,111 @@
+environments:
+  default:
+    values: []
+  autodeploy:
+    values:
+      - podAnnotations:
+          commit-ref: "{{ env "CI_COMMIT_SHORT_SHA" }}"
+        deploymentAnnotations:
+          commit-ref: "{{ env "CI_COMMIT_SHORT_SHA" }}"
+      - previewNamespace: "{{ env "KUBE_NAMESPACE" | default "" }}"
+      - istio:
+          gateway: istio-system/default-gateway
+          hostname: {{ env "PREVIEW_APP_NAME" | trunc 62 }}.dev.oxui.de
+        origin: "*"
+      {{- if ne (env "HELM_SECRET_FILE" | default "") "" }}
+      - {{ env "HELM_SECRET_FILE" | default "" | readFile | default (dict) | nindent 8 | trim }}
+      {{- end }}
+  production:
+    kubeContext: "{{ env "KUBE_CONTEXT" | default "appsuite/k8s-agent:hcloud-dev-cluster" }}"
+    values:
+      - podAnnotations:
+          commit-ref: "{{ env "CI_COMMIT_SHORT_SHA" }}"
+        deploymentAnnotations:
+          commit-ref: "{{ env "CI_COMMIT_SHORT_SHA" }}"
+      - previewNamespace: "{{ env "KUBE_NAMESPACE" | default "frontend-plugin-example-main" }}"
+      - istio:
+          gateway: istio-system/default-gateway
+          hostname: frontend-plugin-example-main.dev.oxui.de
+        origin: "*"
+      {{- if ne (env "HELM_SECRET_FILE" | default "") "" }}
+      - {{ env "HELM_SECRET_FILE" | default "" | readFile | default (dict) | nindent 8 | trim }}
+      {{- end }}
+
+values:
+  - kubeContext: "{{ env "KUBE_CONTEXT" | default "appsuite/k8s-agent:hcloud-dev-cluster" }}"
+
+---
+releases:
+  - name: setup
+    chart: ./setup
+    createNamespace: true
+    namespace: "{{ .Values.previewNamespace }}"
+    values:
+      - istio:
+          gateway: {{ .Values.istio.gateway }}
+          hostname: {{ .Values.istio.hostname }}
+        appsuite:
+          middlewareHost: main-core-mw-http-api.main-e2e-stack.svc.cluster.local
+  - name: preview-app-frontend-plugin-example
+    chart: ../helm/frontend-plugin-example
+    namespace: "{{ .Values.previewNamespace }}"
+    values:
+      - global:
+          useDefaultSecurityContext: true
+      - podAnnotations:
+          {{ .Values.podAnnotations | default "{}" | toYaml | nindent 8 | trim }}
+        deploymentAnnotations:
+          {{ .Values.deploymentAnnotations | default "{}" | toYaml | nindent 8 | trim }}
+      - image:
+          repository: {{ env "CI_REGISTRY_IMAGE" | default "registry.gitlab.open-xchange.com/appsuite/web-foundation/frontend-plugin-example" }}
+          tag: {{ env "TAG_NAME" | default "latest" }}
+          pullPolicy: Always
+        defaultRegistry: ""
+        imagePullSecrets:
+          - name: gitlab-registry-credentials
+  - name: preview-app-core-ui-middleware
+    version: 4.0.9
+    chart: oci://registry.open-xchange.com/appsuite-core-internal/charts/core-ui-middleware
+    wait: true
+    values:
+      - image:
+          registry: registry.open-xchange.com
+          repository: appsuite-core-internal/core-ui-middleware
+          tag: latest
+          pullPolicy: Always
+      - global:
+          useDefaultSecurityContext: true
+          appsuite:
+            appRoot: "/"
+      - podAnnotations:
+          {{ .Values.podAnnotations | default "{}" | toYaml | nindent 8 | trim }}
+        deploymentAnnotations:
+          {{ .Values.deploymentAnnotations | default "{}" | toYaml | nindent 8 | trim }}
+      - redis:
+          prefix: plugin-example{{ env "PREVIEW_APP_NAME" | default "" }}
+      - baseUrls:
+          - http://main-core-ui.main-e2e-stack.svc.cluster.local
+          - http://preview-app-frontend-plugin-example
+      - cacheTTL: 5000
+      - minio:
+          enabled: false
+      - s3:
+          bucketName: "core-ui-preview"
+          endpoint: "https://s3.dev.oxui.de"
+          auth:
+            user: {{ env "S3_ACCESS_KEY" }}
+            password: {{ env "S3_SECRET_KEY" }}
+      - updater:
+          resources:
+            limits:
+              memory: 512Mi
+            requests:
+              cpu: 100m
+              memory: 256Mi
+      - resources:
+          limits:
+            cpu: 500m
+            memory: 256Mi
+          requests:
+            cpu: 100m
+            memory: 128Mi

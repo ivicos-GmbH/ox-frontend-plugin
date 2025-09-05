@@ -1,0 +1,17 @@
+replicaCount: 1
+
+ingress:
+  enabled: true
+  hosts:
+    - host: frontend-plugin-example-manual.k3s.training.oxui.de
+      paths:
+        - path: /
+          pathType: ImplementationSpecific
+
+image:
+  repository: gitlab.open-xchange.com:4567/appsuite/web-foundation/frontend-plugin-example
+  pullPolicy: Always
+  tag: latest
+
+imagePullSecrets:
+  - name: gitlab-registry-credentials

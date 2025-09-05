@@ -1,0 +1,12 @@
+node_modules
+.editorconfig
+.env
+.git
+.gitignore
+.gitlab-ci.yml
+.husky
+.vscode
+docker-compose.yml
+Dockerfile
+eslint.config.js
+README.md

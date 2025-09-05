@@ -1,0 +1,14 @@
+node_modules
+.DS_Store
+dist
+dist-ssr
+*.local
+.eslintcache
+npm-debug.log*
+ssl
+/output
+public
+.env
+e2e/output
+*.tgz
+.gitlab/preview/Chart.lock

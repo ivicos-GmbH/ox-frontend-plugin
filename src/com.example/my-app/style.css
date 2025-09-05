@@ -1,0 +1,8 @@
+.com-example-my-app .window-content {
+  padding: 13px;
+  text-align: center;
+}
+
+.com-example-my-app .window-content.colored-background {
+  background-color: lightyellow;
+}

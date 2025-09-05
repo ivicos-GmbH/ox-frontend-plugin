@@ -1,0 +1,11 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": [
+    "local>appsuite/web-foundation/renovate"
+  ],
+  "lockFileMaintenance": {
+    "enabled": true
+  },
+  "configMigration": true,
+  "automerge": true
+}
