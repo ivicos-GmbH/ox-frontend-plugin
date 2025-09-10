@@ -25,6 +25,7 @@ app.setLauncher(options => {
 
   const iframe = $('<iframe>')
     .attr('src', baseUrl)
+    .attr('allow', 'camera; microphone; autoplay')
     .css({
       width: '100%',
       height: '100%',
