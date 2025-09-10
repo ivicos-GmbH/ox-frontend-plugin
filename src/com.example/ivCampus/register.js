@@ -9,13 +9,13 @@ import ui from '$/io.ox/core/desktop'
 import apps from '$/io.ox/core/api/apps'
 
 ui.createApp({
-  id: 'com.example/my-test-app',
-  name: 'com.example/my-test-app',
+  id: 'com.example/ivCampus',
+  name: 'com.example/ivCampus',
   title: 'ivCAMPUS',
   settings: false,
   icon: createIcon('bi/geo-alt.svg'),
-  load: () => import('@/com.example/my-test-app/main')
+  load: () => import('@/com.example/ivCampus/main')
 })
 
 // Register with the launcher
-apps.launcher.add('com.example/my-test-app')
+apps.launcher.add('com.example/ivCampus')

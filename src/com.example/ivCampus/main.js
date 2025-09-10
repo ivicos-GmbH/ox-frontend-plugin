@@ -8,11 +8,12 @@ import $ from '$/jquery'
 import ox from '$/ox'
 import { sendUserData } from './utils'
 
-const app = ox.ui.createApp({ name: 'com.example/my-test-app' })
+const app = ox.ui.createApp({ name: 'com.example/ivCampus', id: 'com.example/ivCampus', title: 'ivCAMPUS' })
 
 app.setLauncher(options => {
   const appWindow = ox.ui.createWindow({
-    name: 'com.example/my-test-app',
+    name: 'com.example/ivCampus',
+    id: 'com.example/ivCampus',
     title: 'ivCAMPUS'
   })
 
