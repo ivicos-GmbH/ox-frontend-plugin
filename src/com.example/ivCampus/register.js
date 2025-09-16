@@ -18,4 +18,4 @@ ui.createApp({
 })
 
 // Register with the launcher
-apps.launcher.add('com.example/ivCampus')
+apps.launcher.add('com.example/ivCampus', { at: 0 })
