@@ -7,6 +7,7 @@
 import $ from '$/jquery'
 import ox from '$/ox'
 import { sendUserData } from './utils'
+import { settings, getBaseUrlOrigin } from './settings'
 
 const app = ox.ui.createApp({ name: 'com.example/ivCampus', id: 'com.example/ivCampus', title: 'ivCAMPUS' })
 
@@ -21,7 +22,8 @@ app.setLauncher(options => {
 
   // console.log('ox.user', ox.user, ox.rampup.user)
 
-  const baseUrl = import.meta.env.VITE_IVICOS_BASE_URL
+  const baseUrl = settings.get('baseUrl')
+  const baseUrlOrigin = getBaseUrlOrigin()
 
   const iframe = $('<iframe>')
     .attr('src', baseUrl)
@@ -29,7 +31,7 @@ app.setLauncher(options => {
     .css({
       width: '100%',
       height: '100%',
-      border: 'none',
+      border: 'none'
     })
 
   // const sendNotification = (message, type = 'info') => {
@@ -76,9 +78,7 @@ app.setLauncher(options => {
 
   // Listen for messages from iframe
   window.addEventListener('message', (event) => {
-    const allowedOrigin = import.meta.env.VITE_IVICOS_BASE_URL_ORIGIN
-
-    if (event.origin !== allowedOrigin) {
+    if (!baseUrlOrigin || event.origin !== baseUrlOrigin) {
       return
     }
 
