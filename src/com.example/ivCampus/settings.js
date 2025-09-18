@@ -7,6 +7,10 @@ export const settings = new Settings('com.example/ivCampus', () => ({
   oidcIssuer: 'https://sso-ivicos.demo.open-xchange.com/realms/oxlab',
   oidcClientId: 'ivCampus',
   oidcRedirectUri: 'https://campus-alpha-client-git-ox-iframe-login-ivicos.vercel.app/ox/auth/callback'
+  // baseUrl: 'https://campus-alpha-client-git-ox-iframe-login-ivicos.vercel.app/ox/auth',
+  // oidcIssuer: 'https://sso-ivicos.demo.open-xchange.com/realms/oxlab',
+  // oidcClientId: 'ivCampus',
+  // oidcRedirectUri: 'https://campus-alpha-client-git-ox-iframe-login-ivicos.vercel.app/ox/auth/callback'
 }))
 
 // Make settings globally accessible for console testing

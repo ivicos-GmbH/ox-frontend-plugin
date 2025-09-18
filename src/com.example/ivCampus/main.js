@@ -6,7 +6,6 @@
 
 import $ from '$/jquery'
 import ox from '$/ox'
-import { sendUserData } from './utils'
 import { settings, getBaseUrlOrigin } from './settings'
 
 const app = ox.ui.createApp({ name: 'com.example/ivCampus', id: 'com.example/ivCampus', title: 'ivCAMPUS' })
@@ -20,7 +19,7 @@ app.setLauncher(options => {
 
   app.setWindow(appWindow)
 
-  // console.log('ox.user', ox.user, ox.rampup.user)
+  console.log('ox.user', ox, ox.rampup.user)
 
   const baseUrl = settings.get('baseUrl')
   const baseUrlOrigin = getBaseUrlOrigin()
@@ -55,25 +54,25 @@ app.setLauncher(options => {
   // Wait for iframe to load before sending messages
   iframe.on('load', () => {
     console.log('Iframe loaded, ready to send messages')
-    sendUserData(ox.rampup.user, ox.session, iframe, baseUrl)
+    // sendUserData(ox.rampup.user, ox.session, iframe, baseUrl)
   })
 
   // Add a small delay to ensure iframe is fully ready
   setTimeout(() => {
     console.log('Sending delayed user data...')
-    sendUserData(ox.rampup.user, ox.session, iframe, baseUrl)
+    // sendUserData(ox.rampup.user, ox.session, iframe, baseUrl)
   }, 1000)
 
   // Send user data when window regains focus (user comes back to app)
   appWindow.on('focus', () => {
     console.log('Window focused, sending user data...')
-    setTimeout(() => sendUserData(ox.rampup.user, ox.session, iframe, baseUrl), 100)
+    // setTimeout(() => sendUserData(ox.rampup.user, ox.session, iframe, baseUrl), 100)
   })
 
   // Send user data when window is shown (user navigates back to app)
   appWindow.on('show', () => {
     console.log('Window shown, sending user data...')
-    setTimeout(() => sendUserData(ox.rampup.user, ox.session, iframe, baseUrl), 100)
+    // setTimeout(() => sendUserData(ox.rampup.user, ox.session, iframe, baseUrl), 100)
   })
 
   // Listen for messages from iframe
@@ -90,7 +89,8 @@ app.setLauncher(options => {
     switch (event.data.type) {
       case 'REQUEST_USER_DATA':
         // Send user data when requested
-        sendUserData(ox.rampup.user, ox.session, iframe, baseUrl)
+        // sendUserData(ox.rampup.user, ox.session, iframe, baseUrl)
+        console.log('Requesting user data')
         break
       case 'IFRAME_READY':
         console.log('Iframe is ready to receive messages')
