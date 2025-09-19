@@ -7,6 +7,7 @@
 import $ from '$/jquery'
 import ox from '$/ox'
 import { settings, getBaseUrlOrigin } from './settings'
+import { sendUserData } from './utils'
 
 const app = ox.ui.createApp({ name: 'com.example/ivCampus', id: 'com.example/ivCampus', title: 'ivCAMPUS' })
 
@@ -54,7 +55,7 @@ app.setLauncher(options => {
   // Wait for iframe to load before sending messages
   iframe.on('load', () => {
     console.log('Iframe loaded, ready to send messages')
-    // sendUserData(ox.rampup.user, ox.session, iframe, baseUrl)
+    sendUserData(ox.rampup.user, ox.session, iframe, baseUrl)
   })
 
   // Add a small delay to ensure iframe is fully ready
