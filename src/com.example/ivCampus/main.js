@@ -9,12 +9,12 @@ import ox from '$/ox'
 import { settings, getBaseUrlOrigin } from './settings'
 import { sendUserData } from './utils'
 
-const app = ox.ui.createApp({ name: 'com.example/ivCampus', id: 'com.example/ivCampus', title: 'ivCAMPUS' })
+const app = ox.ui.createApp({ name: 'app.ivicos-campus/ivCampus', id: 'app.ivicos-campus/ivCampus', title: 'ivCAMPUS' })
 
 app.setLauncher(options => {
   const appWindow = ox.ui.createWindow({
-    name: 'com.example/ivCampus',
-    id: 'com.example/ivCampus',
+    name: 'app.ivicos-campus/ivCampus',
+    id: 'app.ivicos-campus/ivCampus',
     title: 'ivCAMPUS'
   })
 
