@@ -1,8 +1,4 @@
 /* eslint-disable license-header/header */
-/**
- * @copyright Copyright (c) Open-Xchange GmbH, Germany <info@open-xchange.com>
- * @license AGPL-3.0
- */
 
 import { createIcon } from '$/io.ox/core/components'
 import ui from '$/io.ox/core/desktop'
@@ -14,7 +10,7 @@ ui.createApp({
   title: 'ivCAMPUS',
   settings: false,
   icon: createIcon('bi/geo-alt.svg'),
-  load: () => import('@/app.ivicos-campus/ivCampus/main')
+  load: () => import('@/com.example/ivCampus/main')
 })
 
 // Register with the launcher
