@@ -5,8 +5,8 @@ import ui from '$/io.ox/core/desktop'
 import apps from '$/io.ox/core/api/apps'
 
 ui.createApp({
-  id: 'com.example/ivCampus',
-  name: 'com.example/ivCampus',
+  id: 'app.ivicos-campus/ivCampus',
+  name: 'app.ivicos-campus/ivCampus',
   title: 'ivCAMPUS',
   settings: () => import('@/com.example/ivCampus/settings/pane.js'),
   icon: createIcon('bi/geo-alt.svg'),
@@ -14,4 +14,4 @@ ui.createApp({
 })
 
 // Register with the launcher
-apps.launcher.add('com.example/ivCampus', { at: 0 })
+apps.launcher.add('app.ivicos-campus/ivCampus', { at: 0 })
