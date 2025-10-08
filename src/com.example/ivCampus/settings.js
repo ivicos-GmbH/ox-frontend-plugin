@@ -2,7 +2,7 @@
 
 import { Settings } from '$/io.ox/core/settings'
 
-export const settings = new Settings('app.ivicos-campus/ivCampus', () => ({
+export const settings = new Settings('com.example/ivCampus', () => ({
   baseUrl: 'https://campus-alpha-client-git-ox-iframe-login-ivicos.vercel.app/ox/auth',
   oidcIssuer: 'https://sso-ivicos.demo.open-xchange.com/realms/oxlab',
   oidcClientId: 'ivCampus',
