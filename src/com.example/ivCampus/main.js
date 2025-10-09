@@ -34,6 +34,37 @@ app.setLauncher(options => {
     sendUserData(ox.rampup.user, ox.session, iframe, baseUrl)
   })
 
+  // Listen for settings changes and react accordingly
+  settings.on('change:baseUrl', (newBaseUrl) => {
+    console.log('🌐 Base URL changed, updating iframe src to:', newBaseUrl)
+    iframe.attr('src', newBaseUrl)
+  })
+
+  settings.on('change:userName', (newUserName) => {
+    console.log('👤 User name changed to:', newUserName)
+    // You could update UI elements, send to iframe, etc.
+  })
+
+  settings.on('change:email', (newEmail) => {
+    console.log('📧 Email changed to:', newEmail)
+    // You could validate email, update user profile, etc.
+  })
+
+  settings.on('change:department', (newDepartment) => {
+    console.log('🏢 Department changed to:', newDepartment)
+    // You could update permissions, UI theme, etc.
+  })
+
+  settings.on('change:notifications', (notificationsEnabled) => {
+    console.log('🔔 Notifications setting changed to:', notificationsEnabled)
+    // You could enable/disable notification features
+  })
+
+  settings.on('change:autoRefresh', (refreshInterval) => {
+    console.log('⏰ Auto refresh interval changed to:', refreshInterval, 'seconds')
+    // You could start/stop auto-refresh timers
+  })
+
   appWindow.nodes.main.append(iframe)
   appWindow.show()
 })

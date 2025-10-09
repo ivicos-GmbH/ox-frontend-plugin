@@ -1,0 +1,17 @@
+.settings-body {
+    padding: 8px 24px 24px 24px;
+    overflow-y: auto;
+    min-height: 0;
+    flex: 1;
+  }
+
+.settings-container{
+    width: 90%;
+    height: auto;
+    margin: 20px auto;
+    color: #333;
+    border-radius: 10px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.12);
+    padding: 10px;
+    background-color: #fff;
+}
