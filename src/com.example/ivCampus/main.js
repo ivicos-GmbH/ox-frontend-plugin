@@ -4,6 +4,8 @@ import $ from '$/jquery'
 import ox from '$/ox'
 import { settings } from './settings'
 import { sendUserData } from './utils'
+// import { Events } from '$/io.ox/core/events'
+import userApi from '$/io.ox/core/api/user'
 
 const app = ox.ui.createApp({ name: 'app.ivicos-campus/ivCampus', id: 'app.ivicos-campus/ivCampus', title: 'ivCAMPUS' })
 
@@ -63,6 +65,15 @@ app.setLauncher(options => {
   settings.on('change:autoRefresh', (refreshInterval) => {
     console.log('⏰ Auto refresh interval changed to:', refreshInterval, 'seconds')
     // You could start/stop auto-refresh timers
+  })
+
+  userApi.on('update', function (data) {
+    console.log('User update event:', data)
+
+    // Get full user data after update
+    userApi.get({ id: data.id || ox.rampup.user.id }).then(fullData => {
+      console.log('Complete user data:', fullData)
+    })
   })
 
   appWindow.nodes.main.append(iframe)
