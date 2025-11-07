@@ -46,23 +46,6 @@ ext.point('app.ivicos-campus/ivCampus/settings/detail/view').extend({
     console.log('ivCampus extended view render called')
 
     // Create form elements with current settings values
-    const userNameInput = $('<input>')
-      .attr('type', 'text')
-      .addClass('form-control')
-      .val(settings.get('userName'))
-      .on('change', (e) => {
-        settings.set('userName', e.target.value)
-        console.log('🔔 User name changed to:', e.target.value)
-      })
-
-    const emailInput = $('<input>')
-      .attr('type', 'email')
-      .addClass('form-control')
-      .val(settings.get('email'))
-      .on('change', (e) => {
-        settings.set('email', e.target.value)
-        console.log('📧 Email changed to:', e.target.value)
-      })
 
     const departmentSelect = $('<select>')
       .addClass('form-control')
@@ -95,40 +78,65 @@ ext.point('app.ivicos-campus/ivCampus/settings/detail/view').extend({
         console.log('⏰ Auto refresh changed to:', e.target.value, 'seconds')
       })
 
+    const updateProfileButton = $('<button>')
+      .addClass('btn btn-primary')
+      .text('Update ivCAMPUS Profile')
+      .on('click', function () {
+        const $btn = $(this)
+        const originalText = 'Update ivCAMPUS Profile'
+        const updatedText = 'Updated!'
+
+        // Disable button and show updating state
+        $btn.prop('disabled', true)
+        $btn.text('Updating...')
+        $btn.addClass('updating')
+
+        // Trigger settings change to notify main.js
+        const currentValue = settings.get('profileUpdateTrigger') || 0
+        settings.set('profileUpdateTrigger', currentValue + 1)
+        console.log('📝 Update ivCAMPUS Profile button clicked')
+
+        // After a short delay, show "Updated!" then revert
+        setTimeout(() => {
+          $btn.text(updatedText)
+          $btn.removeClass('updating').addClass('updated')
+
+          // Revert to original state after 5 minutes (300000 ms)
+          setTimeout(() => {
+            $btn.text(originalText)
+            $btn.removeClass('updated')
+            $btn.prop('disabled', false)
+          }, 300000)
+        }, 500)
+      })
+
+    this.$el.addClass('ivcampus-settings')
+
     this.$el.append(
       util.fieldset(
         'ivCAMPUS Configuration',
         $('<div>').append(
-          $('<p>').text('Configure your ivCampus settings - changes are detected in console:'),
-          $('<div class="form-group">').append(
-            $('<label>').text('User Name:'),
-            userNameInput,
-            $('<small class="form-text text-muted">').text('Display name for the user')
-          ),
-          $('<div class="form-group">').append(
-            $('<label>').text('Email:'),
-            emailInput,
-            $('<small class="form-text text-muted">').text('User email address')
-          ),
-          $('<div class="form-group">').append(
-            $('<label>').text('Department:'),
+          $('<p>').addClass('intro-text').text('Configure your ivCampus settings. Changes are saved automatically and can be monitored in the console.'),
+          $('<div>').addClass('form-group').append(
+            $('<label>').text('Department'),
             departmentSelect,
-            $('<small class="form-text text-muted">').text('User department')
+            $('<small>').addClass('form-text text-muted').text('Select your department')
           ),
-          $('<div class="form-group">').append(
-            $('<div class="form-check">').append(
+          $('<div>').addClass('form-group').append(
+            $('<div>').addClass('form-check').append(
               notificationsCheckbox,
-              $('<label class="form-check-label">').text('Enable Notifications')
+              $('<label>').addClass('form-check-label').text('Enable Notifications')
             ),
-            $('<small class="form-text text-muted">').text('Receive system notifications')
+            $('<small>').addClass('form-text text-muted').text('Receive notifications in the app')
           ),
-          $('<div class="form-group">').append(
-            $('<label>').text('Auto Refresh (seconds):'),
+          $('<div>').addClass('form-group').append(
+            $('<label>').text('Auto Refresh (seconds)'),
             autoRefreshInput,
-            $('<small class="form-text text-muted">').text('How often to refresh data automatically')
+            $('<small>').addClass('form-text text-muted').text('Interval for automatic data refresh')
           )
         )
-      )
+      ),
+      $('<div>').addClass('button-container').append(updateProfileButton)
     )
   }
 })

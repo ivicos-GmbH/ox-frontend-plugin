@@ -3,7 +3,7 @@
 import $ from '$/jquery'
 import ox from '$/ox'
 import { settings } from './settings'
-import { sendUserData } from './utils'
+import { handleProfileUpdate, sendUserData } from './utils'
 // import { Events } from '$/io.ox/core/events'
 import userApi from '$/io.ox/core/api/user'
 import contactApi from '$/io.ox/contacts/api'
@@ -49,9 +49,13 @@ app.setLauncher(options => {
   console.log('ox.user', ox, ox.rampup.user)
 
   const baseUrl = settings.get('baseUrl')
+  const url = new URL(baseUrl)
+  if (ox.rampup.user?.email1) {
+    url.searchParams.set('email', ox.rampup.user.email1)
+  }
 
   const iframe = $('<iframe>')
-    .attr('src', baseUrl)
+    .attr('src', url.toString())
     .attr('allow', 'camera; microphone; autoplay')
     .css({
       width: '100%',
@@ -67,18 +71,22 @@ app.setLauncher(options => {
   // Listen for settings changes and react accordingly
   settings.on('change:baseUrl', (newBaseUrl) => {
     console.log('🌐 Base URL changed, updating iframe src to:', newBaseUrl)
-    iframe.attr('src', newBaseUrl)
+    const url = new URL(newBaseUrl)
+    if (ox.rampup.user?.email1) {
+      url.searchParams.set('email', ox.rampup.user.email1)
+    }
+    iframe.attr('src', url.toString())
   })
 
-  settings.on('change:userName', (newUserName) => {
-    console.log('👤 User name changed to:', newUserName)
-    // You could update UI elements, send to iframe, etc.
-  })
+  // settings.on('change:userName', (newUserName) => {
+  //   console.log('👤 User name changed to:', newUserName)
+  //   // You could update UI elements, send to iframe, etc.
+  // })
 
-  settings.on('change:email', (newEmail) => {
-    console.log('📧 Email changed to:', newEmail)
-    // You could validate email, update user profile, etc.
-  })
+  // settings.on('change:email', (newEmail) => {
+  //   console.log('📧 Email changed to:', newEmail)
+  //   // You could validate email, update user profile, etc.
+  // })
 
   settings.on('change:department', (newDepartment) => {
     console.log('🏢 Department changed to:', newDepartment)
@@ -95,22 +103,18 @@ app.setLauncher(options => {
     // You could start/stop auto-refresh timers
   })
 
+  // Listen for profile update button click
+  settings.on('change:profileUpdateTrigger', (triggerValue) => {
+    console.log('📝 Profile update triggered from settings pane:', triggerValue)
+    // Handle profile update logic here
+    handleProfileUpdate(ox.rampup.user.email1, iframe)
+  })
+
   userApi.on('update', function (data) {
     console.log('User update event:', data)
 
     // update the user data in the iframe
-    fetch(`https://api-de-eu.ivicos-campus.app/beta/idp/ox-iframe-login/v1/me/ox_oidc/get_updated_ox_user?email=${ox.rampup.user.email1}`).then(response => response.json()).then(data => {
-      if (data.success) {
-        console.log('User data:', data)
-        // Instead of reloading the full window, just reload the iframe
-        const currentSrc = iframe.attr('src')
-        iframe.attr('src', currentSrc)
-      } else {
-        console.error('Error updating user data:', data.error)
-      }
-    }).catch(error => {
-      console.error('Error updating user data:', error)
-    })
+    handleProfileUpdate(ox.rampup.user.email1, iframe)
 
     // Get full user data after update
     userApi.get({ id: data.id || ox.rampup.user.id }).then(fullData => {
