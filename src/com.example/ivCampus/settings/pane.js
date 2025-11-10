@@ -19,20 +19,8 @@ ext.point('app.ivicos-campus/ivCampus/settings/detail').extend({
       ),
       new ExtensibleView({ point: 'app.ivicos-campus/ivCampus/settings/detail/view' })
         .build(function () {
-          // this.$el.css({
-          //   padding: '10px',
-          //   backgroundColor: '#fff',
-          //   borderRadius: '10px',
-          //   boxShadow: '0 1px 3px rgba(0,0,0,0.12)',
-          //   width: '90%',
-          //   margin: '0 auto',
-          //   color: '#333'
-          // })
           this.$el.addClass('settings-body settings-container')
         })
-        // .build(function () {
-        //   this.$el.addClass('settings-body io-ox-ivcampus-settings')
-        // })
         .render().$el
     )
   }

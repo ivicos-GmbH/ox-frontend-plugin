@@ -3,37 +3,8 @@
 import $ from '$/jquery'
 import ox from '$/ox'
 import { settings } from './settings'
-import { handleProfileUpdate, sendUserData } from './utils'
-// import { Events } from '$/io.ox/core/events'
+import { handleProfileUpdate } from './utils'
 import userApi from '$/io.ox/core/api/user'
-import contactApi from '$/io.ox/contacts/api'
-
-// Function to fetch contact image
-const getContactImage = async (userId, size = 150) => {
-  try {
-    const userData = await userApi.get({ id: userId })
-    const imageUrl = contactApi.getContactPhotoUrl(userData, size)
-
-    const response = await fetch(imageUrl, {
-      credentials: 'include' // This includes cookies in the request
-    })
-    if (!response.ok) {
-      throw new Error(`Failed to fetch image: ${response.status}`)
-    }
-
-    const imageBlob = await response.blob()
-    // Create a blob URL that can be used without authentication
-    const blobUrl = URL.createObjectURL(imageBlob)
-    return {
-      url: blobUrl, // Using blob URL instead of the original authenticated URL
-      blob: imageBlob,
-      contentType: response.headers.get('content-type')
-    }
-  } catch (error) {
-    console.error('Error fetching contact image:', error)
-    throw error
-  }
-}
 
 const app = ox.ui.createApp({ name: 'app.ivicos-campus/ivCampus', id: 'app.ivicos-campus/ivCampus', title: 'ivCAMPUS' })
 
@@ -45,8 +16,6 @@ app.setLauncher(options => {
   })
 
   app.setWindow(appWindow)
-
-  console.log('ox.user', ox, ox.rampup.user)
 
   const baseUrl = settings.get('baseUrl')
   const url = new URL(baseUrl)
@@ -63,11 +32,6 @@ app.setLauncher(options => {
       border: 'none'
     })
 
-  iframe.on('load', () => {
-    console.log('Iframe loaded, ready to send messages')
-    sendUserData(ox.rampup.user, ox.session, iframe, baseUrl)
-  })
-
   // Listen for settings changes and react accordingly
   settings.on('change:baseUrl', (newBaseUrl) => {
     console.log('🌐 Base URL changed, updating iframe src to:', newBaseUrl)
@@ -77,16 +41,6 @@ app.setLauncher(options => {
     }
     iframe.attr('src', url.toString())
   })
-
-  // settings.on('change:userName', (newUserName) => {
-  //   console.log('👤 User name changed to:', newUserName)
-  //   // You could update UI elements, send to iframe, etc.
-  // })
-
-  // settings.on('change:email', (newEmail) => {
-  //   console.log('📧 Email changed to:', newEmail)
-  //   // You could validate email, update user profile, etc.
-  // })
 
   settings.on('change:department', (newDepartment) => {
     console.log('🏢 Department changed to:', newDepartment)
@@ -115,17 +69,6 @@ app.setLauncher(options => {
 
     // update the user data in the iframe
     handleProfileUpdate(ox.rampup.user.email1, iframe)
-
-    // Get full user data after update
-    userApi.get({ id: data.id || ox.rampup.user.id }).then(fullData => {
-      console.log('Complete user data:', fullData)
-
-      getContactImage(fullData.id).then(image => {
-        console.log('User image:', image)
-      }).catch(error => {
-        console.error('Error fetching contact image:', error)
-      })
-    })
   })
 
   appWindow.nodes.main.append(iframe)

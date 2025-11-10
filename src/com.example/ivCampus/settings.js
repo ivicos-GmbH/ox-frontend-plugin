@@ -7,13 +7,10 @@ export const settings = new Settings('app.ivicos-campus/ivCampus', () => ({
   oidcIssuer: 'https://sso-ivicos.demo.open-xchange.com/realms/oxlab',
   oidcClientId: 'ivCampus',
   oidcRedirectUri: 'https://campus-alpha-client-git-ox-iframe-login-ivicos.vercel.app/ox/auth/callback',
-  // New dummy settings
-  // userName: 'John Doe',
-  // email: 'john@example.com',
   department: 'IT',
   notifications: true,
   autoRefresh: 30,
-  profileUpdateTrigger: 0 // Counter to track profile update button clicks
+  profileUpdateTrigger: 0
 }))
 
 // Make settings globally accessible for console testing
