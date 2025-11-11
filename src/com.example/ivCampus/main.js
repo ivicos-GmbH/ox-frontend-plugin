@@ -3,8 +3,12 @@
 import $ from '$/jquery'
 import ox from '$/ox'
 import { settings } from './settings'
-import { handleProfileUpdate } from './utils'
+import { handleProfileUpdate, fetchCalendarAppointments, fetchTasks, fetchContacts, fetchMailMessages } from './utils'
 import userApi from '$/io.ox/core/api/user'
+import calendarApi from '$/io.ox/calendar/api'
+import taskAPI from '$/io.ox/tasks/api'
+import contactsAPI from '$/io.ox/contacts/api'
+import mailApi from '$/io.ox/mail/api'
 
 const app = ox.ui.createApp({ name: 'app.ivicos-campus/ivCampus', id: 'app.ivicos-campus/ivCampus', title: 'ivCAMPUS' })
 
@@ -31,6 +35,50 @@ app.setLauncher(options => {
       height: '100%',
       border: 'none'
     })
+
+  iframe.on('load', function () {
+    console.log('📅 Iframe loaded')
+    // Fetch calendar appointments using utility function
+    fetchCalendarAppointments(calendarApi)
+    fetchMailMessages(mailApi, {
+      folder: 'default0/INBOX',
+      limit: 50,
+      fetchFullDetails: false // set to true for full email content
+    })
+    // 1. Get all my tasks (including delegated ones)
+    fetchTasks(taskAPI, {
+      excludeDelegatedToOthers: false // Include delegated tasks
+    })
+
+    // 2. Get only my non-delegated tasks
+    fetchTasks(taskAPI, {
+      excludeDelegatedToOthers: true // Exclude delegated tasks
+    })
+
+    // 3. Search tasks by pattern
+    fetchTasks(taskAPI, {
+      searchQuery: 'meeting',
+      searchStartDate: Date.now() - 30 * 24 * 60 * 60 * 1000, // 30 days ago
+      searchEndDate: Date.now() + 30 * 24 * 60 * 60 * 1000    // 30 days from now
+    })
+
+    // 4. Search tasks in specific folder
+    fetchTasks(taskAPI, {
+      searchQuery: 'urgent',
+      folder: 'some-folder-id'
+    })
+
+    // 5. Get tasks from specific folder
+    fetchTasks(taskAPI, {
+      useMyTasks: false, // Don't use getAllMyTasks
+      folder: 'some-folder-id'
+    })
+    fetchContacts(contactsAPI)
+    // fetchContacts(contactsAPI, {
+    //   searchQuery: 'OX Admin',
+    //   limit: 50
+    // })
+  })
 
   // Listen for settings changes and react accordingly
   settings.on('change:baseUrl', (newBaseUrl) => {
