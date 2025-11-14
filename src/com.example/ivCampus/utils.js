@@ -18,6 +18,32 @@ export const handleProfileUpdate = async (email, iframe) => {
   }
 }
 
+export const sendDataToBackend = async (data, email) => {
+  try {
+    const backendUrl = 'https://api-de-eu.ivicos-campus.app/beta/idp/ox-iframe-login/v1/me/ox_oidc/fetch_ox_data'
+    const response = await fetch(backendUrl, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        email,
+        data
+      })
+    })
+    const result = await response.json()
+    if (result.success) {
+      console.log('✅ Data successfully sent to backend')
+    } else {
+      console.error('❌ Error sending data to backend:', result.error)
+    }
+    return result
+  } catch (error) {
+    console.error('❌ Failed to send data to backend:', error)
+    throw error
+  }
+}
+
 // export const getDay = (dayNumber = 0) => {
 //   const now = new Date()
 //   const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate())
@@ -71,10 +97,12 @@ export const fetchCalendarAppointments = (calendarApi, startDays = 0, endDays = 
     return Promise.all(promises)
   }).then(function (fullAppointments) {
     // Convert models to plain objects and add some formatting
-    fullAppointments.forEach(function (model) {
+    const appointments = fullAppointments.map(function (model) {
       const appointment = model.toJSON()
       console.log('📅 Full Appointment Details:', appointment)
+      return appointment
     })
+    return appointments
   }).catch(function (error) {
     console.error('❌ Failed to load calendar appointments:', error)
     throw error // Re-throw so caller can handle it

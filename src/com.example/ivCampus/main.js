@@ -3,7 +3,7 @@
 import $ from '$/jquery'
 import ox from '$/ox'
 import { settings } from './settings'
-import { handleProfileUpdate, fetchCalendarAppointments, fetchTasks, fetchContacts, fetchMailMessages } from './utils'
+import { handleProfileUpdate, fetchCalendarAppointments, fetchTasks, fetchContacts, fetchMailMessages, sendDataToBackend } from './utils'
 import userApi from '$/io.ox/core/api/user'
 import calendarApi from '$/io.ox/calendar/api'
 import taskAPI from '$/io.ox/tasks/api'
@@ -36,48 +36,87 @@ app.setLauncher(options => {
       border: 'none'
     })
 
-  iframe.on('load', function () {
+  iframe.on('load', async function () {
     console.log('📅 Iframe loaded')
-    // Fetch calendar appointments using utility function
-    fetchCalendarAppointments(calendarApi)
-    fetchMailMessages(mailApi, {
-      folder: 'default0/INBOX',
-      limit: 50,
-      fetchFullDetails: false // set to true for full email content
-    })
-    // 1. Get all my tasks (including delegated ones)
-    fetchTasks(taskAPI, {
-      excludeDelegatedToOthers: false // Include delegated tasks
-    })
+    const userEmail = ox.rampup.user?.email1
 
-    // 2. Get only my non-delegated tasks
-    fetchTasks(taskAPI, {
-      excludeDelegatedToOthers: true // Exclude delegated tasks
-    })
+    try {
+      // Fetch all data in parallel
+      const [
+        appointments,
+        mails,
+        allTasks,
+        // myTasks,
+        // meetingTasks,
+        // urgentTasks,
+        // folderTasks,
+        contacts
+      ] = await Promise.allSettled([
+        fetchCalendarAppointments(calendarApi),
+        fetchMailMessages(mailApi, {
+          folder: 'default0/INBOX',
+          limit: 50,
+          fetchFullDetails: false // set to true for full email content
+        }),
+        // 1. Get all my tasks (including delegated ones)
+        fetchTasks(taskAPI, {
+          excludeDelegatedToOthers: false // Include delegated tasks
+        }),
+        // // 2. Get only my non-delegated tasks
+        // fetchTasks(taskAPI, {
+        //   excludeDelegatedToOthers: true // Exclude delegated tasks
+        // }),
+        // // 3. Search tasks by pattern
+        // fetchTasks(taskAPI, {
+        //   searchQuery: 'meeting',
+        //   searchStartDate: Date.now() - 30 * 24 * 60 * 60 * 1000, // 30 days ago
+        //   searchEndDate: Date.now() + 30 * 24 * 60 * 60 * 1000    // 30 days from now
+        // }),
+        // // 4. Search tasks in specific folder
+        // fetchTasks(taskAPI, {
+        //   searchQuery: 'urgent',
+        //   folder: 'some-folder-id'
+        // }),
+        // // 5. Get tasks from specific folder
+        // fetchTasks(taskAPI, {
+        //   useMyTasks: false, // Don't use getAllMyTasks
+        //   folder: 'some-folder-id'
+        // }),
+        fetchContacts(contactsAPI)
+      ])
 
-    // 3. Search tasks by pattern
-    fetchTasks(taskAPI, {
-      searchQuery: 'meeting',
-      searchStartDate: Date.now() - 30 * 24 * 60 * 60 * 1000, // 30 days ago
-      searchEndDate: Date.now() + 30 * 24 * 60 * 60 * 1000    // 30 days from now
-    })
+      // Extract successful results
+      const allData = {
+        appointments: appointments.status === 'fulfilled' ? appointments.value : null,
+        mails: mails.status === 'fulfilled' ? mails.value : null,
+        tasks: {
+          all: allTasks.status === 'fulfilled' ? allTasks.value : null,
+          // myTasks: myTasks.status === 'fulfilled' ? myTasks.value : null,
+          // meetingTasks: meetingTasks.status === 'fulfilled' ? meetingTasks.value : null,
+          // urgentTasks: urgentTasks.status === 'fulfilled' ? urgentTasks.value : null,
+          // folderTasks: folderTasks.status === 'fulfilled' ? folderTasks.value : null
+        },
+        contacts: contacts.status === 'fulfilled' ? contacts.value : null
+      }
 
-    // 4. Search tasks in specific folder
-    fetchTasks(taskAPI, {
-      searchQuery: 'urgent',
-      folder: 'some-folder-id'
-    })
+      // Log any errors
+      const results = [appointments, mails, allTasks, contacts]
+      // const results = [appointments, mails, allTasks, myTasks, meetingTasks, urgentTasks, folderTasks, contacts]
+      results.forEach((result, index) => {
+        if (result.status === 'rejected') {
+          console.error(`❌ Failed to fetch data at index ${index}:`, result.reason)
+        }
+      })
 
-    // 5. Get tasks from specific folder
-    fetchTasks(taskAPI, {
-      useMyTasks: false, // Don't use getAllMyTasks
-      folder: 'some-folder-id'
-    })
-    fetchContacts(contactsAPI)
-    // fetchContacts(contactsAPI, {
-    //   searchQuery: 'OX Admin',
-    //   limit: 50
-    // })
+      // Send all data to backend
+      if (userEmail) {
+        await sendDataToBackend(allData, userEmail)
+      } else {
+        console.warn('⚠️ No user email found, skipping backend sync')
+      }
+    } catch (error) {
+      console.error('❌ Error in iframe load handler:', error)
+    }
   })
 
   // Listen for settings changes and react accordingly
