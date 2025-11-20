@@ -82,7 +82,7 @@ export const fetchCalendarAppointments = (calendarApi, startDays = 0, endDays = 
 
   const collection = calendarApi.getCollection({
     start: moment().startOf('day').valueOf(),
-    end: moment().endOf('day').add(30, 'days').valueOf()
+    end: moment().endOf('day').valueOf()
   })
 
   return collection.sync().then(function (data) {
@@ -147,7 +147,17 @@ export const fetchMailMessages = (mailApi, options = {}) => {
 
     return Promise.all(promises)
   }).then(function (fullMails) {
-    fullMails.forEach(function (mail) {
+    const todayStart = moment().startOf('day').valueOf()
+    const todayEnd = moment().endOf('day').valueOf()
+
+    // Filter to only messages from today
+    const todayMails = fullMails.filter(function (mail) {
+      const mailData = mail.toJSON ? mail.toJSON() : mail
+      const mailDate = mailData.date ? new Date(mailData.date).getTime() : null
+      return mailDate && mailDate >= todayStart && mailDate <= todayEnd
+    })
+
+    todayMails.forEach(function (mail) {
       // If it's a model, convert to JSON; otherwise it's already an object
       const mailData = mail.toJSON ? mail.toJSON() : mail
 
@@ -164,7 +174,7 @@ export const fetchMailMessages = (mailApi, options = {}) => {
       })
     })
 
-    return fullMails.map(m => m.toJSON ? m.toJSON() : m)
+    return todayMails.map(m => m.toJSON ? m.toJSON() : m)
   }).catch(function (error) {
     console.error('❌ Failed to load mail messages:', error)
     throw error
@@ -350,7 +360,27 @@ export const fetchTasks = async (taskAPI, options = {}) => {
     }
 
     const fullTasks = await fetchFullTasks(tasks, folder)
-    const tasksData = fullTasks.map(toPlainTask).map(mapTaskToInfo)
+    const plainTasks = fullTasks.map(toPlainTask)
+
+    // Filter to only tasks for today (based on start_time or end_time) before mapping
+    const todayStart = moment().startOf('day').valueOf()
+    const todayEnd = moment().endOf('day').valueOf()
+
+    const todayTasks = plainTasks.filter(function (task) {
+      const startTime = task.start_time ? new Date(task.start_time).getTime() : null
+      const endTime = task.end_time ? new Date(task.end_time).getTime() : null
+
+      // Include task if start_time or end_time falls within today
+      if (startTime && startTime >= todayStart && startTime <= todayEnd) return true
+      if (endTime && endTime >= todayStart && endTime <= todayEnd) return true
+
+      // Also include if task spans today (starts before and ends after today)
+      if (startTime && endTime && startTime < todayStart && endTime > todayEnd) return true
+
+      return false
+    })
+
+    const tasksData = todayTasks.map(mapTaskToInfo)
 
     return tasksData
   } catch (error) {
