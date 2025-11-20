@@ -3,191 +3,209 @@
 import $ from '$/jquery'
 import ox from '$/ox'
 import { settings } from './settings'
-import { handleProfileUpdate, fetchCalendarAppointments, fetchTasks, fetchContacts, fetchMailMessages, sendDataToBackend, watchForDataChanges } from './utils'
+import {
+  handleProfileUpdate,
+  fetchCalendarAppointments,
+  fetchTasks,
+  fetchContacts,
+  fetchMailMessages,
+  sendDataToBackend,
+  watchForDataChanges,
+  DEFAULT_FETCH_OPTIONS
+} from './utils'
 import userApi from '$/io.ox/core/api/user'
 import calendarApi from '$/io.ox/calendar/api'
 import taskAPI from '$/io.ox/tasks/api'
 import contactsAPI from '$/io.ox/contacts/api'
 import mailApi from '$/io.ox/mail/api'
 
-const app = ox.ui.createApp({ name: 'app.ivicos-campus/ivCampus', id: 'app.ivicos-campus/ivCampus', title: 'ivCAMPUS' })
+const APP_CONFIG = {
+  name: 'app.ivicos-campus/ivCampus',
+  id: 'app.ivicos-campus/ivCampus',
+  title: 'ivCAMPUS'
+}
 
-app.setLauncher(options => {
-  const appWindow = ox.ui.createWindow({
-    name: 'app.ivicos-campus/ivCampus',
-    id: 'app.ivicos-campus/ivCampus',
-    title: 'ivCAMPUS'
-  })
+const app = ox.ui.createApp(APP_CONFIG)
 
-  app.setWindow(appWindow)
-
-  const baseUrl = settings.get('baseUrl')
+/**
+ * Build iframe URL with user email parameter
+ * @param {string} baseUrl - Base URL from settings
+ * @returns {string}
+ */
+const buildIframeUrl = (baseUrl) => {
   const url = new URL(baseUrl)
-  if (ox.rampup.user?.email1) {
-    url.searchParams.set('email', ox.rampup.user.email1)
+  const userEmail = ox.rampup.user?.email1
+  if (userEmail) {
+    url.searchParams.set('email', userEmail)
   }
+  return url.toString()
+}
 
-  const iframe = $('<iframe>')
-    .attr('src', url.toString())
+/**
+ * Create and configure iframe element
+ * @param {string} src - Iframe source URL
+ * @returns {jQuery}
+ */
+const createIframe = (src) => {
+  return $('<iframe>')
+    .attr('src', src)
     .attr('allow', 'camera; microphone; autoplay')
     .css({
       width: '100%',
       height: '100%',
       border: 'none'
     })
+}
 
-  iframe.on('load', async function () {
-    console.log('📅 Iframe loaded')
-    const userEmail = ox.rampup.user?.email1
+/**
+ * Extract successful results from Promise.allSettled results
+ * @param {Array} results - Promise.allSettled results
+ * @returns {Object}
+ */
+const extractDataResults = (results) => {
+  const [appointments, mails, allTasks, contacts] = results
 
-    try {
-      // Fetch all data in parallel
-      const [
-        appointments,
-        mails,
-        allTasks,
-        // myTasks,
-        // meetingTasks,
-        // urgentTasks,
-        // folderTasks,
-        contacts
-      ] = await Promise.allSettled([
-        fetchCalendarAppointments(calendarApi),
-        fetchMailMessages(mailApi, {
-          folder: 'default0/INBOX',
-          limit: 50,
-          fetchFullDetails: false // set to true for full email content
-        }),
-        // 1. Get all my tasks (including delegated ones)
-        fetchTasks(taskAPI, {
-          excludeDelegatedToOthers: false // Include delegated tasks
-        }),
-        // // 2. Get only my non-delegated tasks
-        // fetchTasks(taskAPI, {
-        //   excludeDelegatedToOthers: true // Exclude delegated tasks
-        // }),
-        // // 3. Search tasks by pattern
-        // fetchTasks(taskAPI, {
-        //   searchQuery: 'meeting',
-        //   searchStartDate: Date.now() - 30 * 24 * 60 * 60 * 1000, // 30 days ago
-        //   searchEndDate: Date.now() + 30 * 24 * 60 * 60 * 1000    // 30 days from now
-        // }),
-        // // 4. Search tasks in specific folder
-        // fetchTasks(taskAPI, {
-        //   searchQuery: 'urgent',
-        //   folder: 'some-folder-id'
-        // }),
-        // // 5. Get tasks from specific folder
-        // fetchTasks(taskAPI, {
-        //   useMyTasks: false, // Don't use getAllMyTasks
-        //   folder: 'some-folder-id'
-        // }),
-        fetchContacts(contactsAPI)
-      ])
+  return {
+    appointments: appointments.status === 'fulfilled' ? appointments.value : null,
+    mails: mails.status === 'fulfilled' ? mails.value : null,
+    tasks: {
+      all: allTasks.status === 'fulfilled' ? allTasks.value : null
+    },
+    contacts: contacts.status === 'fulfilled' ? contacts.value : null
+  }
+}
 
-      // Extract successful results
-      const allData = {
-        appointments: appointments.status === 'fulfilled' ? appointments.value : null,
-        mails: mails.status === 'fulfilled' ? mails.value : null,
-        tasks: {
-          all: allTasks.status === 'fulfilled' ? allTasks.value : null,
-          // myTasks: myTasks.status === 'fulfilled' ? myTasks.value : null,
-          // meetingTasks: meetingTasks.status === 'fulfilled' ? meetingTasks.value : null,
-          // urgentTasks: urgentTasks.status === 'fulfilled' ? urgentTasks.value : null,
-          // folderTasks: folderTasks.status === 'fulfilled' ? folderTasks.value : null
-        },
-        contacts: contacts.status === 'fulfilled' ? contacts.value : null
-      }
-
-      // Log any errors
-      const results = [appointments, mails, allTasks, contacts]
-      // const results = [appointments, mails, allTasks, myTasks, meetingTasks, urgentTasks, folderTasks, contacts]
-      results.forEach((result, index) => {
-        if (result.status === 'rejected') {
-          console.error(`❌ Failed to fetch data at index ${index}:`, result.reason)
-        }
-      })
-
-      // Send all data to backend
-      if (userEmail) {
-        await sendDataToBackend(allData, userEmail)
-      } else {
-        console.warn('⚠️ No user email found, skipping backend sync')
-      }
-
-      // Set up watchers for real-time updates - refetch and send to backend on changes
-      if (userEmail) {
-        watchForDataChanges(calendarApi, {
-          fetchFunction: fetchCalendarAppointments,
-          userEmail,
-          fetchOptions: {},
-          dataType: 'calendar',
-          allData
-        })
-
-        watchForDataChanges(mailApi, {
-          fetchFunction: fetchMailMessages,
-          userEmail,
-          fetchOptions: {
-            folder: 'default0/INBOX',
-            limit: 50,
-            fetchFullDetails: false
-          },
-          dataType: 'mail',
-          allData
-        })
-
-        watchForDataChanges(taskAPI, {
-          fetchFunction: fetchTasks,
-          userEmail,
-          fetchOptions: {
-            excludeDelegatedToOthers: false
-          },
-          dataType: 'tasks',
-          allData
-        })
-      }
-    } catch (error) {
-      console.error('❌ Error in iframe load handler:', error)
+/**
+ * Log errors from Promise.allSettled results
+ * @param {Array} results - Promise.allSettled results
+ */
+const logFetchErrors = (results) => {
+  results.forEach((result, index) => {
+    if (result.status === 'rejected') {
+      console.error(`❌ Failed to fetch data at index ${index}:`, result.reason)
     }
   })
+}
 
-  // Listen for settings changes and react accordingly
-  settings.on('change:baseUrl', (newBaseUrl) => {
-    console.log('🌐 Base URL changed, updating iframe src to:', newBaseUrl)
-    const url = new URL(newBaseUrl)
-    if (ox.rampup.user?.email1) {
-      url.searchParams.set('email', ox.rampup.user.email1)
+/**
+ * Fetch all data sources in parallel
+ * @returns {Promise<Array>}
+ */
+const fetchAllData = () => {
+  return Promise.allSettled([
+    fetchCalendarAppointments(calendarApi),
+    fetchMailMessages(mailApi, DEFAULT_FETCH_OPTIONS.mail),
+    fetchTasks(taskAPI, DEFAULT_FETCH_OPTIONS.tasks),
+    fetchContacts(contactsAPI, DEFAULT_FETCH_OPTIONS.contacts)
+  ])
+}
+
+/**
+ * Set up watchers for all data sources
+ * @param {string} userEmail - User email
+ * @param {Object} allData - Current data object
+ */
+const setupWatchers = (userEmail, allData) => {
+  const watcherConfigs = [
+    {
+      api: calendarApi,
+      fetchFunction: fetchCalendarAppointments,
+      fetchOptions: {},
+      dataType: 'calendar'
+    },
+    {
+      api: mailApi,
+      fetchFunction: fetchMailMessages,
+      fetchOptions: DEFAULT_FETCH_OPTIONS.mail,
+      dataType: 'mail'
+    },
+    {
+      api: taskAPI,
+      fetchFunction: fetchTasks,
+      fetchOptions: DEFAULT_FETCH_OPTIONS.tasks,
+      dataType: 'tasks'
     }
-    iframe.attr('src', url.toString())
+  ]
+
+  watcherConfigs.forEach((config) => {
+    watchForDataChanges(config.api, {
+      fetchFunction: config.fetchFunction,
+      userEmail,
+      fetchOptions: config.fetchOptions,
+      dataType: config.dataType,
+      allData
+    })
   })
+}
 
-  settings.on('change:department', (newDepartment) => {
-    console.log('🏢 Department changed to:', newDepartment)
-    // You could update permissions, UI theme, etc.
+/**
+ * Handle iframe load event - fetch and sync data
+ * @param {jQuery} iframe - Iframe element
+ */
+const handleIframeLoad = async (iframe) => {
+  console.log('📅 Iframe loaded')
+  const userEmail = ox.rampup.user?.email1
+
+  try {
+    const results = await fetchAllData()
+    const allData = extractDataResults(results)
+    logFetchErrors(results)
+
+    if (userEmail) {
+      await sendDataToBackend(allData, userEmail)
+      setupWatchers(userEmail, allData)
+    } else {
+      console.warn('⚠️ No user email found, skipping backend sync')
+    }
+  } catch (error) {
+    console.error('❌ Error in iframe load handler:', error)
+  }
+}
+
+/**
+ * Update iframe source URL
+ * @param {jQuery} iframe - Iframe element
+ * @param {string} baseUrl - New base URL
+ */
+const updateIframeUrl = (iframe, baseUrl) => {
+  const newUrl = buildIframeUrl(baseUrl)
+  iframe.attr('src', newUrl)
+  console.log('🌐 Base URL changed, updating iframe src to:', newUrl)
+}
+
+/**
+ * Setup settings change listeners
+ * @param {jQuery} iframe - Iframe element
+ */
+const setupSettingsListeners = (iframe) => {
+  const settingsHandlers = {
+    'change:baseUrl': (newBaseUrl) => updateIframeUrl(iframe, newBaseUrl),
+    'change:department': (newDepartment) => console.log('🏢 Department changed to:', newDepartment),
+    'change:notifications': (notificationsEnabled) => console.log('🔔 Notifications setting changed to:', notificationsEnabled),
+    'change:autoRefresh': (refreshInterval) => console.log('⏰ Auto refresh interval changed to:', refreshInterval, 'seconds'),
+    'change:profileUpdateTrigger': () => {
+      console.log('📝 Profile update triggered from settings pane')
+      handleProfileUpdate(ox.rampup.user.email1, iframe)
+    }
+  }
+
+  Object.entries(settingsHandlers).forEach(([event, handler]) => {
+    settings.on(event, handler)
   })
+}
 
-  settings.on('change:notifications', (notificationsEnabled) => {
-    console.log('🔔 Notifications setting changed to:', notificationsEnabled)
-    // You could enable/disable notification features
-  })
+app.setLauncher(() => {
+  const appWindow = ox.ui.createWindow(APP_CONFIG)
+  app.setWindow(appWindow)
 
-  settings.on('change:autoRefresh', (refreshInterval) => {
-    console.log('⏰ Auto refresh interval changed to:', refreshInterval, 'seconds')
-    // You could start/stop auto-refresh timers
-  })
+  const baseUrl = settings.get('baseUrl')
+  const iframe = createIframe(buildIframeUrl(baseUrl))
 
-  // Listen for profile update button click
-  settings.on('change:profileUpdateTrigger', (triggerValue) => {
-    console.log('📝 Profile update triggered from settings pane:', triggerValue)
-    // Handle profile update logic here
-    handleProfileUpdate(ox.rampup.user.email1, iframe)
-  })
+  iframe.on('load', () => handleIframeLoad(iframe))
+  setupSettingsListeners(iframe)
 
-  userApi.on('update', function (data) {
-    console.log('User update event:', data)
-
-    // update the user data in the iframe
+  userApi.on('update', () => {
+    console.log('User update event detected')
     handleProfileUpdate(ox.rampup.user.email1, iframe)
   })
 
