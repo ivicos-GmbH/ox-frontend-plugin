@@ -3,7 +3,7 @@
 import $ from '$/jquery'
 import ox from '$/ox'
 import { settings } from './settings'
-import { handleProfileUpdate, fetchCalendarAppointments, fetchTasks, fetchContacts, fetchMailMessages, sendDataToBackend } from './utils'
+import { handleProfileUpdate, fetchCalendarAppointments, fetchTasks, fetchContacts, fetchMailMessages, sendDataToBackend, watchForDataChanges } from './utils'
 import userApi from '$/io.ox/core/api/user'
 import calendarApi from '$/io.ox/calendar/api'
 import taskAPI from '$/io.ox/tasks/api'
@@ -113,6 +113,39 @@ app.setLauncher(options => {
         await sendDataToBackend(allData, userEmail)
       } else {
         console.warn('⚠️ No user email found, skipping backend sync')
+      }
+
+      // Set up watchers for real-time updates - refetch and send to backend on changes
+      if (userEmail) {
+        watchForDataChanges(calendarApi, {
+          fetchFunction: fetchCalendarAppointments,
+          userEmail,
+          fetchOptions: {},
+          dataType: 'calendar',
+          allData
+        })
+
+        watchForDataChanges(mailApi, {
+          fetchFunction: fetchMailMessages,
+          userEmail,
+          fetchOptions: {
+            folder: 'default0/INBOX',
+            limit: 50,
+            fetchFullDetails: false
+          },
+          dataType: 'mail',
+          allData
+        })
+
+        watchForDataChanges(taskAPI, {
+          fetchFunction: fetchTasks,
+          userEmail,
+          fetchOptions: {
+            excludeDelegatedToOthers: false
+          },
+          dataType: 'tasks',
+          allData
+        })
       }
     } catch (error) {
       console.error('❌ Error in iframe load handler:', error)

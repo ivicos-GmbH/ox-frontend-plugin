@@ -544,3 +544,65 @@ export const fetchContacts = async (contactsAPI, options = {}) => {
     throw error
   }
 }
+
+/**
+ * Watch for data changes (create, update, delete) and refetch data to send to backend
+ * @param {Object} apiEndpoint - API endpoint (calendarApi, mailApi, or taskAPI)
+ * @param {Object} options - Options for fetching data and sending to backend
+ * @param {Object} options.fetchOptions - Options to pass to the fetch function (folder, limit, etc.)
+ * @param {String} options.userEmail - User email for backend sync
+ * @param {Function} options.fetchFunction - Function to call to refetch data (fetchCalendarAppointments, fetchMailMessages, fetchTasks)
+ * @param {String} options.dataType - Type of data ('calendar', 'mail', 'tasks')
+ * @param {Object} options.allData - Current allData object to merge with updated data
+ */
+export const watchForDataChanges = (apiEndpoint, options = {}) => {
+  if (!apiEndpoint || !apiEndpoint.on) {
+    console.warn('⚠️ API endpoint does not support event listening')
+    return
+  }
+
+  const { fetchFunction, userEmail, fetchOptions = {}, dataType, allData = {} } = options
+
+  const handleChange = async (event, data) => {
+    console.log(`📊 ${dataType || 'Data'} ${event} event detected`)
+
+    try {
+      // Refetch the data
+      if (!fetchFunction) {
+        console.warn(`⚠️ No fetch function provided for ${dataType}`)
+        return
+      }
+
+      const updatedData = await fetchFunction(apiEndpoint, fetchOptions)
+      console.log(`✅ Refetched ${dataType || 'data'}:`, updatedData?.length || 'N/A')
+
+      // Send to backend
+      if (userEmail) {
+        // Merge with existing allData
+        const dataToSend = { ...allData }
+        if (dataType === 'calendar') {
+          dataToSend.appointments = updatedData
+        } else if (dataType === 'mail') {
+          dataToSend.mails = updatedData
+        } else if (dataType === 'tasks') {
+          dataToSend.tasks = { ...dataToSend.tasks, all: updatedData }
+        }
+
+        await sendDataToBackend(dataToSend, userEmail)
+        console.log(`📤 Sent updated ${dataType} data to backend`)
+      } else {
+        console.warn('⚠️ No user email provided, skipping backend sync')
+      }
+    } catch (error) {
+      console.error(`❌ Failed to refetch and send ${dataType} data:`, error)
+    }
+  }
+
+  // Listen for create, update, delete events
+  apiEndpoint.on('create', (data) => handleChange('create', data))
+  apiEndpoint.on('update', (data) => handleChange('update', data))
+  apiEndpoint.on('delete', (data) => handleChange('delete', data))
+  apiEndpoint.on('change', (data) => handleChange('update', data))
+
+  console.log(`👂 Watching for ${dataType || 'data'} changes`)
+}
