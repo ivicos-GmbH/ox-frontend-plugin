@@ -27,29 +27,30 @@ export const handleProfileUpdate = async (email, iframe) => {
  * @param {Object} data - Data to send
  * @param {string} email - User email
  * @returns {Promise<Object>}
+ *
+ * NOTE: This function is currently commented out - using postMessage instead
  */
-export const sendDataToBackend = async (data, email) => {
-  try {
-    const response = await fetch(API_CONFIG.backendSync, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
-        email,
-        data
-      })
-    })
-    const result = await response.json()
-    if (result.success) {
-      console.log('✅ Data successfully sent to backend')
-    } else {
-      console.error('❌ Error sending data to backend:', result.error)
-    }
-    return result
-  } catch (error) {
-    console.error('❌ Failed to send data to backend:', error)
-    throw error
-  }
-}
-
+// export const sendDataToBackend = async (data, email) => {
+//   try {
+//     const response = await fetch(API_CONFIG.backendSync, {
+//       method: 'POST',
+//       headers: {
+//         'Content-Type': 'application/json'
+//       },
+//       body: JSON.stringify({
+//         email,
+//         data
+//       })
+//     })
+//     const result = await response.json()
+//     if (result.success) {
+//       console.log('✅ Data successfully sent to backend')
+//     } else {
+//       console.error('❌ Error sending data to backend:', result.error)
+//     }
+//     return result
+//   } catch (error) {
+//     console.error('❌ Failed to send data to backend:', error)
+//     throw error
+//   }
+// }

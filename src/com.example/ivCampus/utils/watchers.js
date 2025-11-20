@@ -1,13 +1,15 @@
 /* eslint-disable license-header/header */
 
-import { sendDataToBackend } from './backend'
+// import { sendDataToBackend } from './backend' // Commented out - using postMessage instead
+import { sendOxDataToIframe } from './postmessage'
 
 /**
- * Watch for data changes and sync to backend
+ * Watch for data changes and send to iframe via postMessage
  * @param {Object} apiEndpoint - API endpoint instance
  * @param {Object} options - Watch options
  * @param {Function} options.fetchFunction - Function to refetch data
- * @param {string} options.userEmail - User email for backend sync
+ * @param {jQuery} options.iframe - Iframe element for postMessage
+ * @param {string} options.userEmail - User email (kept for compatibility, not used)
  * @param {Object} options.fetchOptions - Options to pass to fetch function
  * @param {string} options.dataType - Type of data ('calendar', 'mail', 'tasks')
  * @param {Object} options.allData - Current allData object to merge with
@@ -20,7 +22,8 @@ export const watchForDataChanges = (apiEndpoint, options = {}) => {
 
   const {
     fetchFunction,
-    userEmail,
+    iframe,
+    // userEmail, // Not used - postMessage doesn't need email
     fetchOptions = {},
     dataType,
     allData = {}
@@ -38,7 +41,7 @@ export const watchForDataChanges = (apiEndpoint, options = {}) => {
       const updatedData = await fetchFunction(apiEndpoint, fetchOptions)
       console.log(`✅ Refetched ${dataType || 'data'}:`, updatedData?.length || 'N/A')
 
-      if (userEmail) {
+      if (iframe) {
         const dataToSend = { ...allData }
 
         const dataTypeMap = {
@@ -56,10 +59,15 @@ export const watchForDataChanges = (apiEndpoint, options = {}) => {
           }
         }
 
-        await sendDataToBackend(dataToSend, userEmail)
-        console.log(`📤 Sent updated ${dataType} data to backend`)
+        // Send to iframe via postMessage instead of backend
+        sendOxDataToIframe(iframe, dataToSend)
+        console.log(`📤 Sent updated ${dataType} data to iframe via postMessage`)
+
+        // Backend sync commented out - using postMessage instead
+        // await sendDataToBackend(dataToSend, userEmail)
+        // console.log(`📤 Sent updated ${dataType} data to backend`)
       } else {
-        console.warn('⚠️ No user email provided, skipping backend sync')
+        console.warn('⚠️ No iframe provided, skipping postMessage')
       }
     } catch (error) {
       console.error(`❌ Failed to refetch and send ${dataType} data:`, error)

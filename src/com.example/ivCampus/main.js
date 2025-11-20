@@ -9,9 +9,10 @@ import {
   fetchTasks,
   fetchContacts,
   fetchMailMessages,
-  sendDataToBackend,
+  // sendDataToBackend, // Commented out - using postMessage instead
   watchForDataChanges,
-  DEFAULT_FETCH_OPTIONS
+  DEFAULT_FETCH_OPTIONS,
+  sendOxDataToIframe
 } from './utils'
 import userApi from '$/io.ox/core/api/user'
 import calendarApi from '$/io.ox/calendar/api'
@@ -102,10 +103,11 @@ const fetchAllData = () => {
 
 /**
  * Set up watchers for all data sources
- * @param {string} userEmail - User email
+ * @param {jQuery} iframe - Iframe element
+ * @param {string} userEmail - User email (kept for compatibility)
  * @param {Object} allData - Current data object
  */
-const setupWatchers = (userEmail, allData) => {
+const setupWatchers = (iframe, userEmail, allData) => {
   const watcherConfigs = [
     {
       api: calendarApi,
@@ -130,6 +132,7 @@ const setupWatchers = (userEmail, allData) => {
   watcherConfigs.forEach((config) => {
     watchForDataChanges(config.api, {
       fetchFunction: config.fetchFunction,
+      iframe,
       userEmail,
       fetchOptions: config.fetchOptions,
       dataType: config.dataType,
@@ -139,7 +142,7 @@ const setupWatchers = (userEmail, allData) => {
 }
 
 /**
- * Handle iframe load event - fetch and sync data
+ * Handle iframe load event - fetch and send data via postMessage
  * @param {jQuery} iframe - Iframe element
  */
 const handleIframeLoad = async (iframe) => {
@@ -151,11 +154,18 @@ const handleIframeLoad = async (iframe) => {
     const allData = extractDataResults(results)
     logFetchErrors(results)
 
+    // Send data to iframe via postMessage (calendar, mail, tasks only)
+    sendOxDataToIframe(iframe, allData)
+
+    // Backend sync commented out - using postMessage instead
+    // if (userEmail) {
+    //   await sendDataToBackend(allData, userEmail)
+    // }
+
     if (userEmail) {
-      await sendDataToBackend(allData, userEmail)
-      setupWatchers(userEmail, allData)
+      setupWatchers(iframe, userEmail, allData)
     } else {
-      console.warn('⚠️ No user email found, skipping backend sync')
+      console.warn('⚠️ No user email found, skipping watchers setup')
     }
   } catch (error) {
     console.error('❌ Error in iframe load handler:', error)
