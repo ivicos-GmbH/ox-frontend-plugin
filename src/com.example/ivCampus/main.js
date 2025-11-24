@@ -12,7 +12,8 @@ import {
   // sendDataToBackend, // Commented out - using postMessage instead
   watchForDataChanges,
   DEFAULT_FETCH_OPTIONS,
-  sendOxDataToIframe
+  sendOxDataToIframe,
+  handleNavigation
 } from './utils'
 import userApi from '$/io.ox/core/api/user'
 import calendarApi from '$/io.ox/calendar/api'
@@ -204,6 +205,38 @@ const setupSettingsListeners = (iframe) => {
   })
 }
 
+/**
+ * Setup message listener for navigation requests from iframe
+ * @param {jQuery} iframe - Iframe element
+ */
+const setupMessageListener = (iframe) => {
+  const handleMessage = (event) => {
+    // Verify origin matches iframe origin for security
+    const iframeSrc = iframe.attr('src')
+    if (!iframeSrc) return
+
+    try {
+      const iframeOrigin = new URL(iframeSrc).origin
+      if (event.origin !== iframeOrigin) {
+        console.warn('⚠️ Message from unexpected origin:', event.origin)
+        return
+      }
+    } catch (error) {
+      console.warn('⚠️ Could not verify message origin:', error)
+      return
+    }
+
+    // Handle navigation requests
+    if (event.data && event.data.type === 'ox-open-item') {
+      console.log('🔗 Navigation request received:', event.data.request)
+      handleNavigation(event.data.request)
+    }
+  }
+
+  window.addEventListener('message', handleMessage)
+  console.log('👂 Message listener set up for navigation requests')
+}
+
 app.setLauncher(() => {
   const appWindow = ox.ui.createWindow(APP_CONFIG)
   app.setWindow(appWindow)
@@ -213,6 +246,7 @@ app.setLauncher(() => {
 
   iframe.on('load', () => handleIframeLoad(iframe))
   setupSettingsListeners(iframe)
+  setupMessageListener(iframe)
 
   userApi.on('update', () => {
     console.log('User update event detected')
