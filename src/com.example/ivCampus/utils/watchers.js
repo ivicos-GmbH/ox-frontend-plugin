@@ -174,8 +174,6 @@ export const watchForDataChanges = (apiEndpoint, options = {}) => {
       console.log(`✅ Refetched ${dataType || 'data'}:`, updatedData?.length || 'N/A')
 
       if (iframe) {
-        const dataToSend = { ...allData }
-
         const dataTypeMap = {
           calendar: 'appointments',
           mail: 'mails',
@@ -184,16 +182,24 @@ export const watchForDataChanges = (apiEndpoint, options = {}) => {
 
         const dataKey = dataTypeMap[dataType]
         if (dataKey) {
+          // Update allData in place FIRST so subsequent changes use the latest data
           if (dataType === 'tasks') {
-            dataToSend.tasks = { ...dataToSend.tasks, all: updatedData }
+            allData.tasks = allData.tasks ? { ...allData.tasks, all: updatedData } : { all: updatedData }
           } else {
-            dataToSend[dataKey] = updatedData
+            // For appointments and mails, ensure we're using an array (handle null/undefined)
+            allData[dataKey] = Array.isArray(updatedData) ? updatedData : (updatedData || [])
           }
         }
 
+        // Create a copy for sending - this now includes the updated data
+        const dataToSend = { ...allData }
+
         // Send to iframe via postMessage instead of backend
         sendOxDataToIframe(iframe, dataToSend)
-        console.log(`📤 Sent updated ${dataType} data to iframe via postMessage`)
+        const tasksCount = dataToSend.tasks?.all?.length || 0
+        const appointmentsCount = dataToSend.appointments?.length || 0
+        const mailsCount = dataToSend.mails?.length || 0
+        console.log(`📤 Sent updated ${dataType} data to iframe via postMessage: ${tasksCount} tasks, ${appointmentsCount} appointments, ${mailsCount} mails`)
 
         // Backend sync commented out - using postMessage instead
         // await sendDataToBackend(dataToSend, userEmail)
