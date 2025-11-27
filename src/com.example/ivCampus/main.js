@@ -227,9 +227,9 @@ const setupMessageListener = (iframe) => {
     }
 
     // Handle navigation requests
-    if (event.data && event.data.type === 'ox-open-item') {
+    if (event.data && (event.data.type === 'ox-open-item' || event.data.type === 'ox-add-item')) {
       console.log('🔗 Navigation request received:', event.data.request)
-      handleNavigation(event.data.request)
+      handleNavigation(event.data)
     }
   }
 
