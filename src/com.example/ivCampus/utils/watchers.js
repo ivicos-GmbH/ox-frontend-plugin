@@ -2,7 +2,7 @@
 
 // import { sendDataToBackend } from './backend' // Commented out - using postMessage instead
 import { sendOxDataToIframe } from './postmessage'
-import { toPlainObject, transformTask } from './data-transformers'
+import { toPlainObject, transformMail, transformTask } from './data-transformers'
 import { overlapsToday } from './date-helpers'
 
 const getMailKey = (mail) => {
@@ -37,7 +37,13 @@ export const watchForDataChanges = (apiEndpoint, options = {}) => {
     allData = {}
   } = options
 
+  const registeredHandlers = []
   const recentlyDeletedMailKeys = new Set()
+
+  const registerHandler = (event, handler) => {
+    apiEndpoint.on(event, handler)
+    registeredHandlers.push({ event, handler })
+  }
 
   const removeRecentlyDeletedMails = (mails) => {
     if (dataType !== 'mail' || recentlyDeletedMailKeys.size === 0 || !Array.isArray(mails)) return mails
@@ -147,7 +153,7 @@ export const watchForDataChanges = (apiEndpoint, options = {}) => {
             if (model) {
               const modelData = typeof model.toJSON === 'function' ? model.toJSON() : model
               itemId = modelData?.id || modelData?.get?.('id')
-              itemFolder = modelData?.folder || modelData?.get?.('folder')
+              itemFolder = modelData?.folder || modelData?.folder_id || modelData?.get?.('folder') || modelData?.get?.('folder_id')
             }
           }
 
@@ -184,13 +190,15 @@ export const watchForDataChanges = (apiEndpoint, options = {}) => {
                 console.log('⏭️ Created task does not overlap today, skipping')
               }
             } else {
-              // For calendar and mail, use the fetched data directly
+              const itemToMerge = dataType === 'mail'
+                ? transformMail(toPlainObject(createdItemData))
+                : createdItemData
               const existingIndex = updatedData.findIndex(item => item.id === itemId)
               if (existingIndex >= 0) {
-                updatedData[existingIndex] = createdItemData
+                updatedData[existingIndex] = itemToMerge
                 console.log(`🔄 Replaced existing ${dataType} item in fetched data`)
               } else {
-                updatedData.push(createdItemData)
+                updatedData.push(itemToMerge)
                 console.log(`➕ Added created ${dataType} item to fetched data`)
               }
             }
@@ -247,7 +255,7 @@ export const watchForDataChanges = (apiEndpoint, options = {}) => {
   events.forEach((event) => {
     // Some APIs (like tasks) pass the model as a separate argument
     // Accept multiple arguments to handle both cases
-    apiEndpoint.on(event, (...args) => {
+    registerHandler(event, (...args) => {
       // First arg is usually the event object, second might be the model
       const eventData = args[0]
       const model = args[1] || eventData?.model || eventData?.target
@@ -256,7 +264,7 @@ export const watchForDataChanges = (apiEndpoint, options = {}) => {
   })
 
   if (dataType === 'mail') {
-    apiEndpoint.on('deleted-mails', (...args) => {
+    registerHandler('deleted-mails', (...args) => {
       const deletedMails = args.find(Array.isArray) || []
       rememberDeletedMails(deletedMails)
       allData.mails = removeRecentlyDeletedMails(allData.mails || [])
@@ -266,4 +274,11 @@ export const watchForDataChanges = (apiEndpoint, options = {}) => {
   }
 
   console.log(`👂 Watching for ${dataType || 'data'} changes`)
+
+  return () => {
+    if (typeof apiEndpoint.off !== 'function') return
+    registeredHandlers.forEach(({ event, handler }) => {
+      apiEndpoint.off(event, handler)
+    })
+  }
 }

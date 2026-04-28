@@ -11,15 +11,6 @@ import registry from '$/io.ox/core/main/registry'
 // Track pending operations to prevent duplicate launches
 const pendingOperations = new Map()
 
-// Debounce helper to prevent rapid successive calls
-const debounce = (fn, delay = 300) => {
-  let timeoutId
-  return (...args) => {
-    clearTimeout(timeoutId)
-    timeoutId = setTimeout(() => fn(...args), delay)
-  }
-}
-
 /**
  * Construct composite ID for calendar appointment
  * @param {string} appointmentId - Appointment ID
@@ -270,22 +261,4 @@ export const handleNavigation = (data) => {
   } catch (error) {
     console.error('❌ Navigation failed:', error)
   }
-}
-
-// Debounced handler to prevent rapid successive calls
-const debouncedHandleNavigation = debounce(handleNavigation, 300)
-
-// Set up postMessage listener only once
-let messageListenerSetup = false
-
-if (typeof window !== 'undefined' && !messageListenerSetup) {
-  window.addEventListener('message', function (event) {
-    // Verify origin for security (adjust to your plugin's origin)
-    // if (event.origin !== 'https://your-plugin-domain.com') return
-
-    if (event.data && event.data.type === 'ox-open-item' && event.data.request) {
-      debouncedHandleNavigation(event.data.request)
-    }
-  }, false)
-  messageListenerSetup = true
 }

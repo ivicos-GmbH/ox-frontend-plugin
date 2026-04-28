@@ -7,8 +7,8 @@ import {
   handleProfileUpdate,
   fetchCalendarAppointments,
   fetchTasks,
-  fetchContacts,
   fetchMailMessages,
+  // fetchContacts, // Keep for future contact sync; currently not sent via postMessage
   // sendDataToBackend, // Commented out - using postMessage instead
   watchForDataChanges,
   DEFAULT_FETCH_OPTIONS,
@@ -18,8 +18,8 @@ import {
 import userApi from '$/io.ox/core/api/user'
 import calendarApi from '$/io.ox/calendar/api'
 import taskAPI from '$/io.ox/tasks/api'
-import contactsAPI from '$/io.ox/contacts/api'
 import mailApi from '$/io.ox/mail/api'
+// import contactsAPI from '$/io.ox/contacts/api' // Keep for future contact sync
 
 const APP_CONFIG = {
   name: 'app.ivicos-campus/ivCampus',
@@ -28,6 +28,7 @@ const APP_CONFIG = {
 }
 
 const app = ox.ui.createApp(APP_CONFIG)
+let cleanupDataWatchers = null
 
 /**
  * Build iframe URL with user email parameter
@@ -65,15 +66,17 @@ const createIframe = (src) => {
  * @returns {Object}
  */
 const extractDataResults = (results) => {
-  const [appointments, mails, allTasks, contacts] = results
+  // Re-enable contacts here if sendOxDataToIframe starts forwarding contacts.
+  // const [appointments, mails, allTasks, contacts] = results
+  const [appointments, mails, allTasks] = results
 
   return {
     appointments: appointments.status === 'fulfilled' ? appointments.value : null,
     mails: mails.status === 'fulfilled' ? mails.value : null,
     tasks: {
       all: allTasks.status === 'fulfilled' ? allTasks.value : null
-    },
-    contacts: contacts.status === 'fulfilled' ? contacts.value : null
+    }
+    // contacts: contacts.status === 'fulfilled' ? contacts.value : null
   }
 }
 
@@ -97,8 +100,8 @@ const fetchAllData = () => {
   return Promise.allSettled([
     fetchCalendarAppointments(calendarApi),
     fetchMailMessages(mailApi, DEFAULT_FETCH_OPTIONS.mail),
-    fetchTasks(taskAPI, DEFAULT_FETCH_OPTIONS.tasks),
-    fetchContacts(contactsAPI, DEFAULT_FETCH_OPTIONS.contacts)
+    fetchTasks(taskAPI, DEFAULT_FETCH_OPTIONS.tasks)
+    // fetchContacts(contactsAPI, DEFAULT_FETCH_OPTIONS.contacts)
   ])
 }
 
@@ -130,8 +133,8 @@ const setupWatchers = (iframe, userEmail, allData) => {
     }
   ]
 
-  watcherConfigs.forEach((config) => {
-    watchForDataChanges(config.api, {
+  const cleanupWatchers = watcherConfigs.map((config) => {
+    return watchForDataChanges(config.api, {
       fetchFunction: config.fetchFunction,
       iframe,
       userEmail,
@@ -140,6 +143,12 @@ const setupWatchers = (iframe, userEmail, allData) => {
       allData
     })
   })
+
+  return () => {
+    cleanupWatchers.forEach((cleanupWatcher) => {
+      if (typeof cleanupWatcher === 'function') cleanupWatcher()
+    })
+  }
 }
 
 /**
@@ -163,8 +172,13 @@ const handleIframeLoad = async (iframe) => {
     //   await sendDataToBackend(allData, userEmail)
     // }
 
+    if (cleanupDataWatchers) {
+      cleanupDataWatchers()
+      cleanupDataWatchers = null
+    }
+
     if (userEmail) {
-      setupWatchers(iframe, userEmail, allData)
+      cleanupDataWatchers = setupWatchers(iframe, userEmail, allData)
     } else {
       console.warn('⚠️ No user email found, skipping watchers setup')
     }
@@ -196,7 +210,8 @@ const setupSettingsListeners = (iframe) => {
     'change:autoRefresh': (refreshInterval) => console.log('⏰ Auto refresh interval changed to:', refreshInterval, 'seconds'),
     'change:profileUpdateTrigger': () => {
       console.log('📝 Profile update triggered from settings pane')
-      handleProfileUpdate(ox.rampup.user.email1, iframe)
+      const userEmail = ox.rampup.user?.email1
+      if (userEmail) handleProfileUpdate(userEmail, iframe)
     }
   }
 
@@ -250,7 +265,8 @@ app.setLauncher(() => {
 
   userApi.on('update', () => {
     console.log('User update event detected')
-    handleProfileUpdate(ox.rampup.user.email1, iframe)
+    const userEmail = ox.rampup.user?.email1
+    if (userEmail) handleProfileUpdate(userEmail, iframe)
   })
 
   appWindow.nodes.main.append(iframe)
