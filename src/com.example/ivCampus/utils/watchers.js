@@ -5,6 +5,12 @@ import { sendOxDataToIframe } from './postmessage'
 import { toPlainObject, transformTask } from './data-transformers'
 import { overlapsToday } from './date-helpers'
 
+const getMailKey = (mail) => {
+  const id = mail?.id
+  const folder = mail?.folder_id || mail?.folder
+  return id == null || !folder ? null : `${folder}:${id}`
+}
+
 /**
  * Watch for data changes and send to iframe via postMessage
  * @param {Object} apiEndpoint - API endpoint instance
@@ -31,6 +37,30 @@ export const watchForDataChanges = (apiEndpoint, options = {}) => {
     allData = {}
   } = options
 
+  const recentlyDeletedMailKeys = new Set()
+
+  const removeRecentlyDeletedMails = (mails) => {
+    if (dataType !== 'mail' || recentlyDeletedMailKeys.size === 0 || !Array.isArray(mails)) return mails
+    return mails.filter((mail) => {
+      const mailKey = getMailKey(mail)
+      return !mailKey || !recentlyDeletedMailKeys.has(mailKey)
+    })
+  }
+
+  const rememberDeletedMails = (deletedMails = []) => {
+    if (dataType !== 'mail') return
+    const mailKeys = deletedMails
+      .map(getMailKey)
+      .filter(Boolean)
+
+    if (mailKeys.length === 0) return
+
+    mailKeys.forEach((mailKey) => recentlyDeletedMailKeys.add(mailKey))
+    setTimeout(() => {
+      mailKeys.forEach((mailKey) => recentlyDeletedMailKeys.delete(mailKey))
+    }, 15000)
+  }
+
   const handleChange = async (event, data) => {
     console.log(`📊 ${dataType || 'Data'} ${event} event detected`, data)
 
@@ -40,7 +70,8 @@ export const watchForDataChanges = (apiEndpoint, options = {}) => {
         return
       }
 
-      const updatedData = await fetchFunction(apiEndpoint, fetchOptions)
+      let updatedData = await fetchFunction(apiEndpoint, fetchOptions)
+      updatedData = removeRecentlyDeletedMails(updatedData)
 
       // For create events, the collection might not include the new item yet
       // Fetch the specific item from event data and merge it
@@ -223,6 +254,16 @@ export const watchForDataChanges = (apiEndpoint, options = {}) => {
       handleChange(event, model || eventData)
     })
   })
+
+  if (dataType === 'mail') {
+    apiEndpoint.on('deleted-mails', (...args) => {
+      const deletedMails = args.find(Array.isArray) || []
+      rememberDeletedMails(deletedMails)
+      allData.mails = removeRecentlyDeletedMails(allData.mails || [])
+      if (iframe) sendOxDataToIframe(iframe, { ...allData })
+      console.log(`📤 Removed ${deletedMails?.length || 0} deleted mails from iframe data`)
+    })
+  }
 
   console.log(`👂 Watching for ${dataType || 'data'} changes`)
 }

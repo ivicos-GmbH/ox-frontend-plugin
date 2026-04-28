@@ -1,7 +1,11 @@
 /* eslint-disable license-header/header */
 
+import mailApi from '$/io.ox/mail/api'
 import { getStatusText, getPriorityText } from './mappers'
 import { toLocalString } from './date-helpers'
+
+/** @see $/io.ox/mail/api FLAGS.SEEN */
+const MAIL_FLAG_SEEN = mailApi.FLAGS?.SEEN ?? 32
 
 /**
  * Convert model to plain object
@@ -41,6 +45,81 @@ export const fetchFullDetails = async (items, fetchFn) => {
       })
     )
   )
+}
+
+/**
+ * Parse OX mail `from`: string, or [[`displayName`, `email`]], ...
+ * @param {unknown} from - Raw `from` field from mail API
+ * @returns {{ senderName: string, senderEmail: string }}
+ */
+export const parseMailSender = (from) => {
+  if (from == null) return { senderName: '', senderEmail: '' }
+  if (typeof from === 'string') {
+    const s = from.trim()
+    return { senderName: s, senderEmail: '' }
+  }
+  if (!Array.isArray(from) || from.length === 0) {
+    return { senderName: '', senderEmail: '' }
+  }
+  const first = from[0]
+  if (Array.isArray(first)) {
+    const name = first[0]
+    const email = first[1]
+    return {
+      senderName: name != null && name !== '' ? String(name) : '',
+      senderEmail: email != null && email !== '' ? String(email) : ''
+    }
+  }
+  return { senderName: String(first), senderEmail: '' }
+}
+
+/**
+ * Map OX mail list row → iframe / client shape (IEmailData).
+ *
+ * Backend example:
+ * `{ id, folder_id, subject, text_preview, from: [[name, email]], date, flags, … }`
+ *
+ * @param {Object} mailData - Plain mail object from API
+ * @returns {{
+ *   id: string | number,
+ *   folder_id: string,
+ *   subject: string,
+ *   senderName: string,
+ *   senderEmail: string,
+ *   preview: string,
+ *   date: string,
+ *   unread?: boolean
+ * }}
+ */
+export const transformMail = (mailData) => {
+  if (!mailData || typeof mailData !== 'object') {
+    throw new Error('Mail data is required')
+  }
+
+  const { senderName, senderEmail } = parseMailSender(mailData.from)
+  const rawDate = mailData.received_date ?? mailData.date ?? mailData.sent_date
+  const flags = mailData.flags
+
+  const unread =
+    typeof flags === 'number'
+      ? (flags & MAIL_FLAG_SEEN) === 0
+      : undefined
+
+  const row = {
+    id: mailData.id,
+    folder_id: mailData.folder_id || mailData.folder || '',
+    subject: mailData.subject ?? '',
+    senderName,
+    senderEmail,
+    preview: mailData.text_preview ?? '',
+    date: toLocalString(rawDate) || ''
+  }
+
+  if (unread !== undefined) {
+    row.unread = unread
+  }
+
+  return row
 }
 
 /**

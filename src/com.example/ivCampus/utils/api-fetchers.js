@@ -2,9 +2,10 @@
 
 import moment from 'moment'
 import { getGabId } from '$/io.ox/contacts/util'
-import { toPlainObject, fetchFullDetails, transformTask, transformContact } from './data-transformers'
+import { toPlainObject, fetchFullDetails, transformMail, transformTask, transformContact } from './data-transformers'
 import { getTodayRange, overlapsToday } from './date-helpers'
 import { DEFAULT_FETCH_OPTIONS } from './constants'
+import http from '$/io.ox/core/http'
 
 /**
  * Fetch calendar appointments
@@ -51,70 +52,118 @@ export const fetchCalendarAppointments = (calendarApi) => {
  * @param {Object} options - Fetch options
  * @returns {Promise<Array>}
  */
-export const fetchMailMessages = (mailApi, options = {}) => {
-  if (!mailApi) {
-    throw new Error('Mail API is required')
-  }
 
+export const fetchMailMessages = async (mailApi, options = {}) => {
+  if (!mailApi) throw new Error('Mail API is required')
   const {
     folder = mailApi.getDefaultFolder(),
     limit = DEFAULT_FETCH_OPTIONS.mail.limit,
     sort = '661',
     order = 'desc',
-    fetchFullDetails: fetchFull = DEFAULT_FETCH_OPTIONS.mail.fetchFullDetails
+    // ensures the list rows already include `date` (661) + subject/from/etc
+    columns = http.defaultColumns.mail.all
   } = { ...DEFAULT_FETCH_OPTIONS.mail, ...options }
-
-  return mailApi.getAll({
+  const mails = await mailApi.getAll({
     folder,
     sort,
     order,
-    max: limit
+    max: limit,
+    columns,
+    deleted: false,
+    // unseen: true
   })
-    .then((mails) => {
-      console.log(`📧 Found ${mails.length} mail messages`)
 
-      const promises = mails.map((mail) => {
-        if (fetchFull) {
-          return mailApi.get({
-            folder: mail.folder || folder,
-            id: mail.id
-          })
-        }
-        return Promise.resolve(mail)
-      })
+  const deletedFlag = mailApi.FLAGS?.DELETED ?? 2
 
-      return Promise.all(promises)
+  console.log('📧 Total mails:', mails.length)
+  console.log('📧 Mails:', mails)
+  // if you still want "today only"
+  const { start, end } = getTodayRange()
+  const todayMails = mails
+    .map(toPlainObject)
+    .filter((m) => typeof m.flags !== 'number' || (m.flags & deletedFlag) !== deletedFlag)
+    .filter((m) => {
+      const raw = m.received_date ?? m.sent_date ?? m.date
+      const t =
+        raw == null
+          ? null
+          : typeof raw === 'number'
+            ? raw
+            : new Date(raw).getTime()
+      return t != null && t >= start && t <= end
     })
-    .then((fullMails) => {
-      const { start, end } = getTodayRange()
 
-      const todayMails = fullMails.filter((mail) => {
-        const mailData = toPlainObject(mail)
-        const mailDate = mailData.date ? new Date(mailData.date).getTime() : null
-        return mailDate && mailDate >= start && mailDate <= end
-      })
+  const transformed = todayMails.map((m) => transformMail(m))
 
-      todayMails.forEach((mail) => {
-        const mailData = toPlainObject(mail)
-        console.log('📧 Mail Details:', {
-          id: mailData.id,
-          subject: mailData.subject || 'No subject',
-          from: mailData.from?.[0]?.[1] || mailData.from?.[0]?.[0] || 'Unknown sender',
-          date: new Date(mailData.date).toLocaleString(),
-          folder: mailData.folder,
-          flags: mailData.flags,
-          attachments: mailData.attachments?.length || 0,
-          allFields: Object.keys(mailData)
-        })
-      })
-
-      return todayMails.map((m) => toPlainObject(m))
-    })
-    .catch((error) => {
-      console.error('❌ Failed to load mail messages:', error)
-      throw error
-    })
+  console.log('📧 Today mails:', transformed.length)
+  console.log('📧 Today mails:', transformed)
+  return transformed
 }
+
+// export const fetchMailMessages = (mailApi, options = {}) => {
+//   if (!mailApi) {
+//     throw new Error('Mail API is required')
+//   }
+
+//   const {
+//     folder = mailApi.getDefaultFolder(),
+//     limit = DEFAULT_FETCH_OPTIONS.mail.limit,
+//     sort = '661',
+//     order = 'desc',
+//     fetchFullDetails: fetchFull = DEFAULT_FETCH_OPTIONS.mail.fetchFullDetails
+//   } = { ...DEFAULT_FETCH_OPTIONS.mail, ...options }
+
+//   return mailApi.getAll({
+//     folder,
+//     sort,
+//     order,
+//     max: limit
+//   })
+//     .then((mails) => {
+//       console.log(`📧 Found ${mails.length} mail messages`)
+
+//       const promises = mails.map((mail) => {
+//         if (fetchFull) {
+//           return mailApi.get({
+//             folder: mail.folder || folder,
+//             id: mail.id
+//           })
+//         }
+//         return Promise.resolve(mail)
+//       })
+
+//       return Promise.all(promises)
+//     })
+//     .then((fullMails) => {
+//       const { start, end } = getTodayRange()
+
+//       const todayMails = fullMails.filter((mail) => {
+//         const mailData = toPlainObject(mail)
+//         const mailDate = mailData.date ? new Date(mailData.date).getTime() : null
+//         return mailDate && mailDate >= start && mailDate <= end
+//       })
+
+//       todayMails.forEach((mail) => {
+//         const mailData = toPlainObject(mail)
+//         console.log('📧 Mail Details:', {
+//           id: mailData.id,
+//           subject: mailData.subject || 'No subject',
+//           from: mailData.from?.[0]?.[1] || mailData.from?.[0]?.[0] || 'Unknown sender',
+//           date: new Date(mailData.date).toLocaleString(),
+//           folder: mailData.folder,
+//           flags: mailData.flags,
+//           attachments: mailData.attachments?.length || 0,
+//           allFields: Object.keys(mailData)
+//         })
+//       })
+
+//       return todayMails.map((m) => toPlainObject(m))
+//     })
+//     .catch((error) => {
+//       console.error('❌ Failed to load mail messages:', error)
+//       throw error
+//     })
+// }
 
 /**
  * Fetch tasks
