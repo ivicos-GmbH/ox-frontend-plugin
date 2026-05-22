@@ -16,6 +16,7 @@ import {
   handleNavigation
 } from './utils'
 import userApi from '$/io.ox/core/api/user'
+import { settings as coreSettings } from '$/io.ox/core/settings'
 import calendarApi from '$/io.ox/calendar/api'
 import taskAPI from '$/io.ox/tasks/api'
 import mailApi from '$/io.ox/mail/api'
@@ -29,9 +30,10 @@ const APP_CONFIG = {
 
 const app = ox.ui.createApp(APP_CONFIG)
 let cleanupDataWatchers = null
+const PENDING_LANGUAGE_SYNC_KEY = 'ivCampus.pendingLanguageSync'
 
 /**
- * Build iframe URL with user email parameter
+ * Build iframe URL with user email and OX language parameters
  * @param {string} baseUrl - Base URL from settings
  * @returns {string}
  */
@@ -41,6 +43,12 @@ const buildIframeUrl = (baseUrl) => {
   if (userEmail) {
     url.searchParams.set('email', userEmail)
   }
+
+  // const selectedLanguage = ox.language
+  // if (selectedLanguage) {
+  //   url.searchParams.set('language', selectedLanguage)
+  // }
+
   return url.toString()
 }
 
@@ -199,6 +207,30 @@ const updateIframeUrl = (iframe, baseUrl) => {
 }
 
 /**
+ * Mark language sync as pending until OX applies the new language after reload.
+ */
+const setupLanguageListener = () => {
+  coreSettings.on('change', (attr) => {
+    if (attr !== 'language') return
+    sessionStorage.setItem(PENDING_LANGUAGE_SYNC_KEY, 'true')
+  })
+}
+
+/**
+ * Sync applied OX language to ivCampus after OX reloads with the new language.
+ * @param {jQuery} iframe - Iframe element
+ */
+const syncLanguageAfterReload = async (iframe) => {
+  if (sessionStorage.getItem(PENDING_LANGUAGE_SYNC_KEY) !== 'true') return
+
+  const userEmail = ox.rampup.user?.email1
+  if (!userEmail) return
+
+  const updated = await handleProfileUpdate(userEmail, iframe)
+  if (updated) sessionStorage.removeItem(PENDING_LANGUAGE_SYNC_KEY)
+}
+
+/**
  * Setup settings change listeners
  * @param {jQuery} iframe - Iframe element
  */
@@ -261,7 +293,9 @@ app.setLauncher(() => {
 
   iframe.on('load', () => handleIframeLoad(iframe))
   setupSettingsListeners(iframe)
+  setupLanguageListener()
   setupMessageListener(iframe)
+  syncLanguageAfterReload(iframe)
 
   userApi.on('update', () => {
     console.log('User update event detected')

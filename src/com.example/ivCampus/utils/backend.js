@@ -6,6 +6,7 @@ import { API_CONFIG } from './constants'
  * Handle profile update by calling backend API
  * @param {string} email - User email
  * @param {jQuery} iframe - Iframe element
+ * @returns {Promise<boolean>}
  */
 export const handleProfileUpdate = async (email, iframe) => {
   try {
@@ -14,11 +15,14 @@ export const handleProfileUpdate = async (email, iframe) => {
     if (data.success) {
       const currentSrc = iframe.attr('src')
       iframe.attr('src', currentSrc)
+      return true
     } else {
       console.error('Error updating user data:', data.error)
+      return false
     }
   } catch (error) {
     console.error('Error updating user data:', error)
+    return false
   }
 }
 
