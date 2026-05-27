@@ -67,199 +67,174 @@ export const watchForDataChanges = (apiEndpoint, options = {}) => {
     }, 15000)
   }
 
+  const extractItemInfo = (data) => {
+    let itemId = null
+    let itemFolder = null
+
+    if (dataType === 'calendar') {
+      if (data?.id && data?.folder) {
+        itemId = data.id
+        itemFolder = data.folder
+      }
+    } else if (dataType === 'tasks') {
+      let model = null
+      if (data && typeof data.get === 'function' && !Array.isArray(data.models)) {
+        model = data
+      } else if (data && typeof data.toJSON === 'function' && !Array.isArray(data.models)) {
+        model = data
+      } else if (data?.model) {
+        model = data.model
+      } else if (data?.target && typeof data.target.get === 'function') {
+        model = data.target
+      }
+
+      if (model) {
+        const modelData = typeof model.toJSON === 'function' ? model.toJSON() : { id: model.get?.('id'), folder: model.get?.('folder') || model.get?.('folder_id') }
+        itemId = modelData?.id
+        itemFolder = modelData?.folder || modelData?.folder_id
+      } else if (data?.id) {
+        itemId = data.id
+        itemFolder = data.folder || data.folder_id
+      }
+    } else if (dataType === 'mail') {
+      const model = data?.model || data?.target || data
+      if (model) {
+        const modelData = typeof model.toJSON === 'function' ? model.toJSON() : model
+        itemId = modelData?.id
+        itemFolder = modelData?.folder || modelData?.folder_id
+      }
+    }
+
+    return { itemId, itemFolder }
+  }
+
+  // For 'create': add the new item directly to allData without replacing the whole list.
+  // Replacing the list with a fresh fetch is unsafe because the OX collection may not have
+  // indexed the new item yet, and any previously-created items that were also manually merged
+  // would disappear from the list.
+  const handleCreate = async (data) => {
+    const { itemId, itemFolder } = extractItemInfo(data)
+
+    if (!itemId || !itemFolder) {
+      console.warn(`⚠️ Could not extract id/folder from ${dataType} create event, falling back to full refetch`)
+      await handleRefetch()
+      return
+    }
+
+    // Wait for the OX collection to index the new item before fetching it
+    await new Promise(resolve => setTimeout(resolve, 200))
+
+    const createdItem = await apiEndpoint.get({ folder: itemFolder, id: itemId })
+    const createdItemData = typeof createdItem.toJSON === 'function' ? createdItem.toJSON() : createdItem
+    console.log(`📦 Fetched created ${dataType} item:`, createdItemData)
+
+    if (dataType === 'tasks') {
+      const plainTask = toPlainObject(createdItemData)
+      const startTime = plainTask.start_time ? new Date(plainTask.start_time).getTime() : null
+      const endTime = plainTask.end_time ? new Date(plainTask.end_time).getTime() : null
+      if (!overlapsToday(startTime, endTime)) {
+        console.log('⏭️ Created task does not overlap today, skipping')
+        return
+      }
+      const transformedTask = transformTask(plainTask)
+      const currentList = allData.tasks?.all ? [...allData.tasks.all] : []
+      const existingIndex = currentList.findIndex(item => String(item.id) === String(itemId))
+      if (existingIndex >= 0) {
+        currentList[existingIndex] = transformedTask
+      } else {
+        currentList.push(transformedTask)
+      }
+      allData.tasks = { ...(allData.tasks || {}), all: currentList }
+    } else if (dataType === 'mail') {
+      const itemToAdd = transformMail(toPlainObject(createdItemData))
+      const currentList = Array.isArray(allData.mails) ? [...allData.mails] : []
+      const existingIndex = currentList.findIndex(item => String(item.id) === String(itemId))
+      if (existingIndex >= 0) {
+        currentList[existingIndex] = itemToAdd
+      } else {
+        currentList.push(itemToAdd)
+      }
+      allData.mails = currentList
+    } else if (dataType === 'calendar') {
+      const currentList = Array.isArray(allData.appointments) ? [...allData.appointments] : []
+      const existingIndex = currentList.findIndex(item => String(item.id) === String(itemId))
+      if (existingIndex >= 0) {
+        currentList[existingIndex] = createdItemData
+      } else {
+        currentList.push(createdItemData)
+      }
+      allData.appointments = currentList
+    }
+
+    if (iframe) {
+      sendOxDataToIframe(iframe, { ...allData })
+      const tasksCount = allData.tasks?.all?.length || 0
+      const appointmentsCount = allData.appointments?.length || 0
+      const mailsCount = allData.mails?.length || 0
+      console.log(`➕ Added created ${dataType} item to iframe data: ${tasksCount} tasks, ${appointmentsCount} appointments, ${mailsCount} mails`)
+    }
+  }
+
+  // For 'update'/'delete': full refetch to sync the latest state from the API.
+  const handleRefetch = async () => {
+    let updatedData = await fetchFunction(apiEndpoint, fetchOptions)
+    updatedData = removeRecentlyDeletedMails(updatedData)
+
+    console.log(`✅ Refetched ${dataType || 'data'}:`, updatedData?.length || 'N/A')
+
+    if (!iframe) {
+      console.warn('⚠️ No iframe provided, skipping postMessage')
+      return
+    }
+
+    const dataTypeMap = { calendar: 'appointments', mail: 'mails', tasks: 'tasks' }
+    const dataKey = dataTypeMap[dataType]
+    if (dataKey) {
+      if (dataType === 'tasks') {
+        allData.tasks = allData.tasks ? { ...allData.tasks, all: updatedData } : { all: updatedData }
+      } else {
+        allData[dataKey] = Array.isArray(updatedData) ? updatedData : (updatedData || [])
+      }
+    }
+
+    sendOxDataToIframe(iframe, { ...allData })
+    const tasksCount = allData.tasks?.all?.length || 0
+    const appointmentsCount = allData.appointments?.length || 0
+    const mailsCount = allData.mails?.length || 0
+    console.log(`📤 Sent updated ${dataType} data to iframe via postMessage: ${tasksCount} tasks, ${appointmentsCount} appointments, ${mailsCount} mails`)
+  }
+
   const handleChange = async (event, data) => {
     console.log(`📊 ${dataType || 'Data'} ${event} event detected`, data)
 
     try {
-      if (!fetchFunction) {
-        console.warn(`⚠️ No fetch function provided for ${dataType}`)
-        return
-      }
-
-      let updatedData = await fetchFunction(apiEndpoint, fetchOptions)
-      updatedData = removeRecentlyDeletedMails(updatedData)
-
-      // For create events, the collection might not include the new item yet
-      // Fetch the specific item from event data and merge it
       if (event === 'create') {
-        try {
-          // Extract item data from event - different APIs structure events differently
-          let itemId = null
-          let itemFolder = null
-
-          if (dataType === 'calendar') {
-            // Calendar events pass the appointment object directly
-            if (data?.id && data?.folder) {
-              itemId = data.id
-              itemFolder = data.folder
-            }
-          } else if (dataType === 'tasks') {
-            // Task events: data might be the model directly, or a jQuery event object
-            // Check if data itself is a model (has get/toJSON methods)
-            let model = null
-
-            if (data && typeof data.get === 'function') {
-              // Data is a Backbone model
-              model = data
-            } else if (data && typeof data.toJSON === 'function') {
-              // Data is a model with toJSON
-              model = data
-            } else if (data?.model) {
-              // Model is nested in event object
-              model = data.model
-            } else if (data?.target && typeof data.target.get === 'function') {
-              // Model is in target
-              model = data.target
-            } else if (data?.result && data.result.then) {
-              // Model might be in a Promise result - try to get it
-              try {
-                const result = await data.result
-                if (result && (typeof result.get === 'function' || typeof result.toJSON === 'function')) {
-                  model = result
-                }
-              } catch (e) {
-                // Promise might have failed, ignore
-              }
-            }
-
-            if (model) {
-              let modelData
-              if (typeof model.toJSON === 'function') {
-                modelData = model.toJSON()
-              } else if (typeof model.get === 'function') {
-                modelData = {
-                  id: model.get('id'),
-                  folder: model.get('folder') || model.get('folder_id'),
-                  folder_id: model.get('folder_id')
-                }
-              } else {
-                modelData = model
-              }
-              itemId = modelData?.id
-              itemFolder = modelData?.folder || modelData?.folder_id
-              console.log(`🔍 Extracted task data from event: id=${itemId}, folder=${itemFolder}`)
-            } else if (data?.id) {
-              // Fallback: event data might have id directly
-              itemId = data.id
-              itemFolder = data.folder || data.folder_id
-              console.log(`🔍 Using task data directly from event: id=${itemId}, folder=${itemFolder}`)
-            } else {
-              console.warn('⚠️ Could not find task model in event data. Event keys:', Object.keys(data || {}))
-              console.warn('⚠️ Event data type:', typeof data, 'has get:', typeof data?.get, 'has toJSON:', typeof data?.toJSON)
-            }
-          } else if (dataType === 'mail') {
-            // Mail events might pass the mail object directly or as a model
-            const model = data?.model || data?.target || data
-            if (model) {
-              const modelData = typeof model.toJSON === 'function' ? model.toJSON() : model
-              itemId = modelData?.id || modelData?.get?.('id')
-              itemFolder = modelData?.folder || modelData?.folder_id || modelData?.get?.('folder') || modelData?.get?.('folder_id')
-            }
-          }
-
-          if (itemId && itemFolder) {
-            // Add a small delay to allow collection to sync
-            await new Promise(resolve => setTimeout(resolve, 200))
-
-            // Fetch the specific item that was just created
-            const createdItem = await apiEndpoint.get({
-              folder: itemFolder,
-              id: itemId
-            })
-
-            const createdItemData = typeof createdItem.toJSON === 'function' ? createdItem.toJSON() : createdItem
-            console.log(`📦 Fetched created ${dataType} item:`, createdItemData)
-
-            // For tasks, we need to transform the data to match the fetched format
-            if (dataType === 'tasks') {
-              const plainTask = toPlainObject(createdItemData)
-              const startTime = plainTask.start_time ? new Date(plainTask.start_time).getTime() : null
-              const endTime = plainTask.end_time ? new Date(plainTask.end_time).getTime() : null
-              // Only include if it overlaps today (matching fetchTasks filter)
-              if (overlapsToday(startTime, endTime)) {
-                const transformedTask = transformTask(plainTask)
-                const existingIndex = updatedData.findIndex(item => item.id === itemId)
-                if (existingIndex >= 0) {
-                  updatedData[existingIndex] = transformedTask
-                  console.log('🔄 Replaced existing task in fetched data')
-                } else {
-                  updatedData.push(transformedTask)
-                  console.log('➕ Added created task to fetched data')
-                }
-              } else {
-                console.log('⏭️ Created task does not overlap today, skipping')
-              }
-            } else {
-              const itemToMerge = dataType === 'mail'
-                ? transformMail(toPlainObject(createdItemData))
-                : createdItemData
-              const existingIndex = updatedData.findIndex(item => item.id === itemId)
-              if (existingIndex >= 0) {
-                updatedData[existingIndex] = itemToMerge
-                console.log(`🔄 Replaced existing ${dataType} item in fetched data`)
-              } else {
-                updatedData.push(itemToMerge)
-                console.log(`➕ Added created ${dataType} item to fetched data`)
-              }
-            }
-          } else {
-            console.warn(`⚠️ Could not extract id/folder from ${dataType} create event data`)
-          }
-        } catch (error) {
-          console.warn(`⚠️ Failed to fetch created ${dataType} item:`, error)
-        }
-      }
-
-      console.log(`✅ Refetched ${dataType || 'data'}:`, updatedData?.length || 'N/A')
-
-      if (iframe) {
-        const dataTypeMap = {
-          calendar: 'appointments',
-          mail: 'mails',
-          tasks: 'tasks'
-        }
-
-        const dataKey = dataTypeMap[dataType]
-        if (dataKey) {
-          // Update allData in place FIRST so subsequent changes use the latest data
-          if (dataType === 'tasks') {
-            allData.tasks = allData.tasks ? { ...allData.tasks, all: updatedData } : { all: updatedData }
-          } else {
-            // For appointments and mails, ensure we're using an array (handle null/undefined)
-            allData[dataKey] = Array.isArray(updatedData) ? updatedData : (updatedData || [])
-          }
-        }
-
-        // Create a copy for sending - this now includes the updated data
-        const dataToSend = { ...allData }
-
-        // Send to iframe via postMessage instead of backend
-        sendOxDataToIframe(iframe, dataToSend)
-        const tasksCount = dataToSend.tasks?.all?.length || 0
-        const appointmentsCount = dataToSend.appointments?.length || 0
-        const mailsCount = dataToSend.mails?.length || 0
-        console.log(`📤 Sent updated ${dataType} data to iframe via postMessage: ${tasksCount} tasks, ${appointmentsCount} appointments, ${mailsCount} mails`)
-
-        // Backend sync commented out - using postMessage instead
-        // await sendDataToBackend(dataToSend, userEmail)
-        // console.log(`📤 Sent updated ${dataType} data to backend`)
+        await handleCreate(data)
       } else {
-        console.warn('⚠️ No iframe provided, skipping postMessage')
+        if (!fetchFunction) {
+          console.warn(`⚠️ No fetch function provided for ${dataType}`)
+          return
+        }
+        await handleRefetch()
       }
     } catch (error) {
       console.error(`❌ Failed to refetch and send ${dataType} data:`, error)
     }
   }
 
-  const events = ['create', 'update', 'delete', 'change']
+  // 'change' is intentionally excluded: it fires concurrently with 'create' and triggers a
+  // full refetch that can return stale data (new item not yet indexed), overwriting the
+  // correctly-merged item that the 'create' handler just added.
+  const events = ['create', 'update', 'delete']
   events.forEach((event) => {
-    // Some APIs (like tasks) pass the model as a separate argument
-    // Accept multiple arguments to handle both cases
     registerHandler(event, (...args) => {
-      // First arg is usually the event object, second might be the model
-      const eventData = args[0]
-      const model = args[1] || eventData?.model || eventData?.target
-      handleChange(event, model || eventData)
+      // Backbone fires events as (model, collection?, options?) — args[0] is the model
+      const first = args[0]
+      const second = args[1]
+      const isBackboneModel = (obj) => obj && !Array.isArray(obj?.models) &&
+        (typeof obj.get === 'function' || typeof obj.toJSON === 'function')
+      const modelArg = isBackboneModel(first) ? first : (isBackboneModel(second) ? second : first)
+      handleChange(event, modelArg)
     })
   })
 
