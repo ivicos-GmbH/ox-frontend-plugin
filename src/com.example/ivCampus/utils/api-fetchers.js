@@ -71,7 +71,7 @@ export const fetchMailMessages = async (mailApi, options = {}) => {
     columns,
     deleted: false,
     // unseen: true
-  })
+  }, false) // bypass OX client-side cache — forces a live IMAP request on every call
 
   const deletedFlag = mailApi.FLAGS?.DELETED ?? 2
 

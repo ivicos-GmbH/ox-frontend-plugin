@@ -30,6 +30,8 @@ const APP_CONFIG = {
 
 const app = ox.ui.createApp(APP_CONFIG)
 let cleanupDataWatchers = null
+let pollIntervalId = null
+const MIN_POLL_INTERVAL_MS = 30_000
 const PENDING_LANGUAGE_SYNC_KEY = 'ivCampus.pendingLanguageSync'
 
 /**
@@ -98,6 +100,28 @@ const logFetchErrors = (results) => {
       console.error(`❌ Failed to fetch data at index ${index}:`, result.reason)
     }
   })
+}
+
+const stopPolling = () => {
+  if (pollIntervalId !== null) {
+    clearInterval(pollIntervalId)
+    pollIntervalId = null
+  }
+}
+
+const startPolling = (iframe, intervalSeconds) => {
+  stopPolling()
+  const ms = Math.max(MIN_POLL_INTERVAL_MS, (intervalSeconds || 30) * 1000)
+  pollIntervalId = setInterval(async () => {
+    try {
+      const results = await fetchAllData()
+      const allData = extractDataResults(results)
+      logFetchErrors(results)
+      sendOxDataToIframe(iframe, allData)
+    } catch (error) {
+      console.error('❌ Auto-refresh poll failed:', error)
+    }
+  }, ms)
 }
 
 /**
@@ -190,6 +214,9 @@ const handleIframeLoad = async (iframe) => {
     } else {
       console.warn('⚠️ No user email found, skipping watchers setup')
     }
+
+    stopPolling()
+    startPolling(iframe, settings.get('autoRefresh'))
   } catch (error) {
     console.error('❌ Error in iframe load handler:', error)
   }
@@ -239,7 +266,7 @@ const setupSettingsListeners = (iframe) => {
     'change:baseUrl': (newBaseUrl) => updateIframeUrl(iframe, newBaseUrl),
     'change:department': (newDepartment) => console.log('🏢 Department changed to:', newDepartment),
     'change:notifications': (notificationsEnabled) => console.log('🔔 Notifications setting changed to:', notificationsEnabled),
-    'change:autoRefresh': (refreshInterval) => console.log('⏰ Auto refresh interval changed to:', refreshInterval, 'seconds'),
+    'change:autoRefresh': (refreshInterval) => startPolling(iframe, refreshInterval),
     'change:profileUpdateTrigger': () => {
       console.log('📝 Profile update triggered from settings pane')
       const userEmail = ox.rampup.user?.email1

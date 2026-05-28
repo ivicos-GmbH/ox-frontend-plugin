@@ -12,3 +12,7 @@ public
 e2e/output
 *.tgz
 .gitlab/preview/Chart.lock
+
+
+# add the docs directory
+docs/
