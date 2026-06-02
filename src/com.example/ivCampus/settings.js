@@ -13,11 +13,6 @@ export const settings = new Settings('app.ivicos-campus/ivCampus', () => ({
   profileUpdateTrigger: 0
 }))
 
-// Make settings globally accessible for console testing
-if (typeof window !== 'undefined') {
-  window.ivCampusSettings = settings
-}
-
 // Helper function to get base URL origin
 export const getBaseUrlOrigin = () => {
   const baseUrl = settings.get('baseUrl')
