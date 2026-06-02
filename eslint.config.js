@@ -28,7 +28,9 @@ export default [
     ignores: [
       'src/lib/jquery*',
       'src/lib/polyfills/*',
-      '**/*.d.ts'
+      '**/*.d.ts',
+      'dist/**',
+      '.claude/**'
     ]
   },
   {
