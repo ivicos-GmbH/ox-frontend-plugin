@@ -1,6 +1,5 @@
 /* eslint-disable license-header/header */
 
-import moment from 'moment'
 import { getGabId } from '$/io.ox/contacts/util'
 import { toPlainObject, fetchFullDetails, transformMail, transformTask, transformContact } from './data-transformers'
 import { getTodayRange, overlapsToday } from './date-helpers'
@@ -17,10 +16,8 @@ export const fetchCalendarAppointments = (calendarApi) => {
     throw new Error('Calendar API is required')
   }
 
-  const collection = calendarApi.getCollection({
-    start: moment().startOf('day').valueOf(),
-    end: moment().endOf('day').valueOf()
-  })
+  const { start, end } = getTodayRange()
+  const collection = calendarApi.getCollection({ start, end })
 
   return collection.sync()
     .then(() => {

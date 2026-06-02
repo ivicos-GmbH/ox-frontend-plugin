@@ -1,48 +1,27 @@
 /* eslint-disable license-header/header */
 
-import moment from 'moment'
+export const getTodayRange = () => {
+  const start = new Date()
+  start.setHours(0, 0, 0, 0)
+  const end = new Date()
+  end.setHours(23, 59, 59, 999)
+  return { start: start.getTime(), end: end.getTime() }
+}
 
-/**
- * Get start and end timestamps for today
- * @returns {{start: number, end: number}}
- */
-export const getTodayRange = () => ({
-  start: moment().startOf('day').valueOf(),
-  end: moment().endOf('day').valueOf()
-})
-
-/**
- * Check if a timestamp falls within today
- * @param {number|null} timestamp - Timestamp to check
- * @returns {boolean}
- */
 export const isToday = (timestamp) => {
-  if (!timestamp) return false
   const { start, end } = getTodayRange()
   return timestamp >= start && timestamp <= end
 }
 
-/**
- * Check if a date range spans or overlaps with today
- * @param {number|null} startTime - Start timestamp
- * @param {number|null} endTime - End timestamp
- * @returns {boolean}
- */
-export const overlapsToday = (startTime, endTime) => {
+export const overlapsToday = (startMs, endMs) => {
   const { start, end } = getTodayRange()
-
-  if (startTime && isToday(startTime)) return true
-  if (endTime && isToday(endTime)) return true
-  if (startTime && endTime && startTime < start && endTime > end) return true
-
-  return false
+  const s = startMs ?? start
+  const e = endMs ?? end
+  return s <= end && e >= start
 }
 
-/**
- * Convert timestamp to localized string
- * @param {number|string|null} date - Date to convert
- * @returns {string|null}
- */
-export const toLocalString = (date) => {
-  return date ? new Date(date).toLocaleString() : null
-}
+export const toLocalString = (timestamp) =>
+  new Date(timestamp).toLocaleString(undefined, {
+    dateStyle: 'short',
+    timeStyle: 'short'
+  })
