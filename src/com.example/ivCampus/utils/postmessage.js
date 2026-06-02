@@ -27,16 +27,15 @@ export const sendDataToIframe = (iframe, data, type = 'ox-data') => {
       return
     }
 
+    let targetOrigin
     try {
-      const origin = new URL(iframeSrc).origin
-      iframeWindow.postMessage(message, origin)
-      console.log(`✅ Data sent to iframe via postMessage (type: ${type})`)
+      targetOrigin = new URL(iframeSrc).origin
     } catch (error) {
-      console.error('❌ Error getting iframe origin:', error)
-      // Fallback: use '*' for same-origin iframes (less secure but functional)
-      iframeWindow.postMessage(message, '*')
-      console.warn('⚠️ Used wildcard origin for postMessage')
+      console.error('postMessage aborted — invalid iframe src, cannot determine target origin:', error)
+      return
     }
+    iframeWindow.postMessage(message, targetOrigin)
+    console.log(`✅ Data sent to iframe via postMessage (type: ${type})`)
   } catch (error) {
     console.error('❌ Failed to send data to iframe:', error)
   }
