@@ -31,6 +31,7 @@ const APP_CONFIG = {
 const app = ox.ui.createApp(APP_CONFIG)
 let cleanupDataWatchers = null
 let pollIntervalId = null
+let trustedOrigin = null
 const MIN_POLL_INTERVAL_MS = 30_000
 const PENDING_LANGUAGE_SYNC_KEY = 'ivCampus.pendingLanguageSync'
 
@@ -218,6 +219,13 @@ const handleIframeLoad = async (iframe) => {
 
     stopPolling()
     startPolling(iframe, settings.get('autoRefresh'))
+
+    const src = iframe.attr('src')
+    try {
+      trustedOrigin = new URL(src).origin
+    } catch {
+      trustedOrigin = null
+    }
   } catch (error) {
     console.error('❌ Error in iframe load handler:', error)
   }
@@ -297,18 +305,9 @@ const setupSettingsListeners = (iframe) => {
  */
 const setupMessageListener = (iframe) => {
   const handleMessage = (event) => {
-    // Verify origin matches iframe origin for security
-    const iframeSrc = iframe.attr('src')
-    if (!iframeSrc) return
-
-    try {
-      const iframeOrigin = new URL(iframeSrc).origin
-      if (event.origin !== iframeOrigin) {
-        console.warn('⚠️ Message from unexpected origin:', event.origin)
-        return
-      }
-    } catch (error) {
-      console.warn('⚠️ Could not verify message origin:', error)
+    // Verify origin matches cached trusted origin for security
+    if (!trustedOrigin || event.origin !== trustedOrigin) {
+      console.warn('⚠️ Message from unexpected origin:', event.origin)
       return
     }
 
