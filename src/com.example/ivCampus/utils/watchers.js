@@ -124,7 +124,14 @@ export const watchForDataChanges = (apiEndpoint, options = {}) => {
     // Wait for the OX collection to index the new item before fetching it
     await new Promise(resolve => setTimeout(resolve, 200))
 
-    const createdItem = await apiEndpoint.get({ folder: itemFolder, id: itemId })
+    let createdItem
+    try {
+      createdItem = await apiEndpoint.get({ folder: itemFolder, id: itemId })
+    } catch (fetchError) {
+      console.warn(`⚠️ Could not fetch created ${dataType} item (${itemId}), falling back to full refetch:`, fetchError)
+      await handleRefetch()
+      return
+    }
     const createdItemData = typeof createdItem.toJSON === 'function' ? createdItem.toJSON() : createdItem
     console.log(`📦 Fetched created ${dataType} item:`, createdItemData)
 
