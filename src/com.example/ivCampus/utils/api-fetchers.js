@@ -3,8 +3,7 @@
 import { getGabId } from '$/io.ox/contacts/util'
 import { toPlainObject, fetchFullDetails, transformMail, transformTask } from './data-transformers'
 import { getTodayRange, overlapsToday } from './date-helpers'
-import { DEFAULT_FETCH_OPTIONS } from './constants'
-import http from '$/io.ox/core/http'
+import { DEFAULT_FETCH_OPTIONS, MAIL_LIST_COLUMNS } from './constants'
 
 /**
  * Fetch calendar appointments
@@ -57,7 +56,7 @@ export const fetchMailMessages = async (mailApi, options = {}) => {
     sort = '661',
     order = 'desc',
     // ensures the list rows already include `date` (661) + subject/from/etc
-    columns = http.defaultColumns.mail.all
+    columns = MAIL_LIST_COLUMNS
   } = { ...DEFAULT_FETCH_OPTIONS.mail, ...options }
   const mails = await mailApi.getAll({
     folder,
