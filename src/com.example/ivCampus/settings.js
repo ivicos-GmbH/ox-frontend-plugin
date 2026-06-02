@@ -16,16 +16,10 @@ export const settings = new Settings('app.ivicos-campus/ivCampus', () => ({
 // Helper function to get base URL origin
 export const getBaseUrlOrigin = () => {
   const baseUrl = settings.get('baseUrl')
-  console.log('getBaseUrlOrigin - baseUrl from settings:', baseUrl)
-  if (baseUrl) {
-    try {
-      const origin = new URL(baseUrl).origin
-      console.log('getBaseUrlOrigin - calculated origin:', origin)
-      return origin
-    } catch (error) {
-      console.error('getBaseUrlOrigin - error creating URL:', error)
-      return null
-    }
+  if (!baseUrl) return null
+  try {
+    return new URL(baseUrl).origin
+  } catch {
+    return null
   }
-  return null
 }

@@ -7,6 +7,8 @@ import ExtensibleView from '$/io.ox/backbone/views/extensible'
 import { settings } from '../settings'
 import './style.css'
 
+const PROFILE_BTN_LABEL = 'Update ivCAMPUS Profile'
+
 ext.point('app.ivicos-campus/ivCampus/settings/detail').extend({
   id: 'view',
   index: 100,
@@ -71,10 +73,9 @@ ext.point('app.ivicos-campus/ivCampus/settings/detail/view').extend({
 
     const updateProfileButton = $('<button>')
       .addClass('btn btn-primary')
-      .text('Update ivCAMPUS Profile')
+      .text(PROFILE_BTN_LABEL)
       .on('click', function () {
         const $btn = $(this)
-        const originalText = 'Update ivCAMPUS Profile'
 
         // Disable button and show updating state
         $btn.prop('disabled', true)
@@ -88,7 +89,7 @@ ext.point('app.ivicos-campus/ivCampus/settings/detail/view').extend({
 
         // Restore button after 5 seconds regardless of outcome
         setTimeout(() => {
-          $btn.text(originalText)
+          $btn.text(PROFILE_BTN_LABEL)
           $btn.removeClass('updating')
           $btn.prop('disabled', false)
         }, 5000)

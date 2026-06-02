@@ -93,71 +93,6 @@ export const fetchMailMessages = async (mailApi, options = {}) => {
   return transformed
 }
 
-// export const fetchMailMessages = (mailApi, options = {}) => {
-//   if (!mailApi) {
-//     throw new Error('Mail API is required')
-//   }
-
-//   const {
-//     folder = mailApi.getDefaultFolder(),
-//     limit = DEFAULT_FETCH_OPTIONS.mail.limit,
-//     sort = '661',
-//     order = 'desc',
-//     fetchFullDetails: fetchFull = DEFAULT_FETCH_OPTIONS.mail.fetchFullDetails
-//   } = { ...DEFAULT_FETCH_OPTIONS.mail, ...options }
-
-//   return mailApi.getAll({
-//     folder,
-//     sort,
-//     order,
-//     max: limit
-//   })
-//     .then((mails) => {
-//       console.log(`📧 Found ${mails.length} mail messages`)
-
-//       const promises = mails.map((mail) => {
-//         if (fetchFull) {
-//           return mailApi.get({
-//             folder: mail.folder || folder,
-//             id: mail.id
-//           })
-//         }
-//         return Promise.resolve(mail)
-//       })
-
-//       return Promise.all(promises)
-//     })
-//     .then((fullMails) => {
-//       const { start, end } = getTodayRange()
-
-//       const todayMails = fullMails.filter((mail) => {
-//         const mailData = toPlainObject(mail)
-//         const mailDate = mailData.date ? new Date(mailData.date).getTime() : null
-//         return mailDate && mailDate >= start && mailDate <= end
-//       })
-
-//       todayMails.forEach((mail) => {
-//         const mailData = toPlainObject(mail)
-//         console.log('📧 Mail Details:', {
-//           id: mailData.id,
-//           subject: mailData.subject || 'No subject',
-//           from: mailData.from?.[0]?.[1] || mailData.from?.[0]?.[0] || 'Unknown sender',
-//           date: new Date(mailData.date).toLocaleString(),
-//           folder: mailData.folder,
-//           flags: mailData.flags,
-//           attachments: mailData.attachments?.length || 0,
-//           allFields: Object.keys(mailData)
-//         })
-//       })
-
-//       return todayMails.map((m) => toPlainObject(m))
-//     })
-//     .catch((error) => {
-//       console.error('❌ Failed to load mail messages:', error)
-//       throw error
-//     })
-// }
-
 /**
  * Fetch tasks
  * @param {Object} taskAPI - Task API instance
@@ -215,10 +150,11 @@ export const fetchTasks = async (taskAPI, options = {}) => {
     const fullTasks = await fetchFullTaskDetails(tasks)
     const plainTasks = fullTasks.map(toPlainObject)
 
+    const todayRange = getTodayRange()
     const todayTasks = plainTasks.filter((task) => {
       const startTime = task.start_time ? new Date(task.start_time).getTime() : null
       const endTime = task.end_time ? new Date(task.end_time).getTime() : null
-      return overlapsToday(startTime, endTime)
+      return overlapsToday(startTime, endTime, todayRange)
     })
 
     const tasksData = todayTasks.map(transformTask)

@@ -132,7 +132,7 @@ export const watchForDataChanges = (apiEndpoint, options = {}) => {
       await handleRefetch()
       return
     }
-    const createdItemData = typeof createdItem.toJSON === 'function' ? createdItem.toJSON() : createdItem
+    const createdItemData = toPlainObject(createdItem)
 
     if (dataType === 'tasks') {
       const plainTask = toPlainObject(createdItemData)

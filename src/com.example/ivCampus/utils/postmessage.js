@@ -1,5 +1,7 @@
 /* eslint-disable license-header/header */
 
+import { getBaseUrlOrigin } from '../settings'
+
 /**
  * Send data to iframe via postMessage
  * @param {jQuery} iframe - Iframe element
@@ -14,26 +16,18 @@ export const sendDataToIframe = (iframe, data, type = 'ox-data') => {
       return
     }
 
+    const targetOrigin = getBaseUrlOrigin()
+    if (!targetOrigin) {
+      console.error('postMessage aborted — baseUrl not configured or invalid')
+      return
+    }
+
     const message = {
       type,
       data,
       timestamp: Date.now()
     }
 
-    // Get the origin from iframe src for security
-    const iframeSrc = iframe.attr('src')
-    if (!iframeSrc) {
-      console.warn('⚠️ Iframe src not available for postMessage origin')
-      return
-    }
-
-    let targetOrigin
-    try {
-      targetOrigin = new URL(iframeSrc).origin
-    } catch (error) {
-      console.error('postMessage aborted — invalid iframe src, cannot determine target origin:', error)
-      return
-    }
     iframeWindow.postMessage(message, targetOrigin)
     console.log(`✅ Data sent to iframe via postMessage (type: ${type})`)
   } catch (error) {

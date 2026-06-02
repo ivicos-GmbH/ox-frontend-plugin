@@ -66,11 +66,12 @@ export const addAppointment = async (request = {}) => {
     const { default: edit } = await ox.load(() => import('$/io.ox/calendar/edit/main'))
     const app = edit.getApp()
     await app.launch()
+    const now = Date.now()
     app.create(new calendarModel.Model({
       title: request.title || '',
-      startDate: request.startDate || Date.now(),
-      endDate: request.endDate || Date.now() + 3600000,
-      ...(request.description ? { note: request.description } : {})
+      startDate: request.startDate || now,
+      endDate: request.endDate || now + 3600000,
+      note: request.description || undefined
     }))
   } catch (error) {
     console.error('❌ Failed to create appointment:', error)
@@ -135,7 +136,7 @@ export const addTask = async (request = {}) => {
         title: request.title || '',
         note: request.note || '',
         folder_id: coreSettings.get('folder/tasks'),
-        ...(request.dueDate ? { end_time: request.dueDate } : {})
+        end_time: request.dueDate || undefined
       }
     })
   } catch (error) {

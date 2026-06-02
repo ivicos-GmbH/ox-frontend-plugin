@@ -13,8 +13,8 @@ export const isToday = (timestamp) => {
   return timestamp >= start && timestamp <= end
 }
 
-export const overlapsToday = (startMs, endMs) => {
-  const { start, end } = getTodayRange()
+export const overlapsToday = (startMs, endMs, range) => {
+  const { start, end } = range ?? getTodayRange()
   const s = startMs ?? start
   const e = endMs ?? end
   return s <= end && e >= start
