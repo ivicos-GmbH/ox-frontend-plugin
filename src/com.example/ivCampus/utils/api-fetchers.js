@@ -1,8 +1,8 @@
 /* eslint-disable license-header/header */
 
 import moment from 'moment'
-import { getGabId } from '$/io.ox/contacts/util'
-import { toPlainObject, fetchFullDetails, transformMail, transformTask, transformContact } from './data-transformers'
+// import { getGabId } from '$/io.ox/contacts/util'
+import { toPlainObject, fetchFullDetails, transformMail, transformTask } from './data-transformers'
 import { getTodayRange, overlapsToday } from './date-helpers'
 import { DEFAULT_FETCH_OPTIONS } from './constants'
 import http from '$/io.ox/core/http'
@@ -75,8 +75,6 @@ export const fetchMailMessages = async (mailApi, options = {}) => {
 
   const deletedFlag = mailApi.FLAGS?.DELETED ?? 2
 
-  console.log('📧 Total mails:', mails.length)
-  console.log('📧 Mails:', mails)
   // if you still want "today only"
   const { start, end } = getTodayRange()
   const todayMails = mails
@@ -95,75 +93,8 @@ export const fetchMailMessages = async (mailApi, options = {}) => {
 
   const transformed = todayMails.map((m) => transformMail(m))
 
-  console.log('📧 Today mails:', transformed.length)
-  console.log('📧 Today mails:', transformed)
   return transformed
 }
-
-// export const fetchMailMessages = (mailApi, options = {}) => {
-//   if (!mailApi) {
-//     throw new Error('Mail API is required')
-//   }
-
-//   const {
-//     folder = mailApi.getDefaultFolder(),
-//     limit = DEFAULT_FETCH_OPTIONS.mail.limit,
-//     sort = '661',
-//     order = 'desc',
-//     fetchFullDetails: fetchFull = DEFAULT_FETCH_OPTIONS.mail.fetchFullDetails
-//   } = { ...DEFAULT_FETCH_OPTIONS.mail, ...options }
-
-//   return mailApi.getAll({
-//     folder,
-//     sort,
-//     order,
-//     max: limit
-//   })
-//     .then((mails) => {
-//       console.log(`📧 Found ${mails.length} mail messages`)
-
-//       const promises = mails.map((mail) => {
-//         if (fetchFull) {
-//           return mailApi.get({
-//             folder: mail.folder || folder,
-//             id: mail.id
-//           })
-//         }
-//         return Promise.resolve(mail)
-//       })
-
-//       return Promise.all(promises)
-//     })
-//     .then((fullMails) => {
-//       const { start, end } = getTodayRange()
-
-//       const todayMails = fullMails.filter((mail) => {
-//         const mailData = toPlainObject(mail)
-//         const mailDate = mailData.date ? new Date(mailData.date).getTime() : null
-//         return mailDate && mailDate >= start && mailDate <= end
-//       })
-
-//       todayMails.forEach((mail) => {
-//         const mailData = toPlainObject(mail)
-//         console.log('📧 Mail Details:', {
-//           id: mailData.id,
-//           subject: mailData.subject || 'No subject',
-//           from: mailData.from?.[0]?.[1] || mailData.from?.[0]?.[0] || 'Unknown sender',
-//           date: new Date(mailData.date).toLocaleString(),
-//           folder: mailData.folder,
-//           flags: mailData.flags,
-//           attachments: mailData.attachments?.length || 0,
-//           allFields: Object.keys(mailData)
-//         })
-//       })
-
-//       return todayMails.map((m) => toPlainObject(m))
-//     })
-//     .catch((error) => {
-//       console.error('❌ Failed to load mail messages:', error)
-//       throw error
-//     })
-// }
 
 /**
  * Fetch tasks
@@ -206,17 +137,14 @@ export const fetchTasks = async (taskAPI, options = {}) => {
       if (searchEndDate) searchParams.end = searchEndDate
 
       tasks = await taskAPI.search(searchParams)
-      console.log(`🔍 Found ${tasks.length} tasks matching "${searchQuery}"`)
     } else if (useMyTasks !== false) {
       tasks = await taskAPI.getAllMyTasks({ excludeDelegatedToOthers })
-      console.log(`✅ Found ${tasks.length} tasks (excludeDelegatedToOthers: ${excludeDelegatedToOthers})`)
     } else {
       tasks = await taskAPI.getAll({
         folder,
         sort: '317',
         order: 'asc'
       })
-      console.log(`✅ Found ${tasks.length} tasks from folder ${folder}`)
     }
 
     const fullTasks = await fetchFullTaskDetails(tasks)
@@ -244,54 +172,54 @@ export const fetchTasks = async (taskAPI, options = {}) => {
  * @param {Object} options - Fetch options
  * @returns {Promise<Array>}
  */
-export const fetchContacts = async (contactsAPI, options = {}) => {
-  if (!contactsAPI) {
-    throw new Error('Contacts API is required')
-  }
+// export const fetchContacts = async (contactsAPI, options = {}) => {
+//   if (!contactsAPI) {
+//     throw new Error('Contacts API is required')
+//   }
 
-  const {
-    folder = getGabId(),
-    searchQuery = null,
-    limit = DEFAULT_FETCH_OPTIONS.contacts.limit
-  } = { ...DEFAULT_FETCH_OPTIONS.contacts, ...options }
+//   const {
+//     folder = getGabId(),
+//     searchQuery = null,
+//     limit = DEFAULT_FETCH_OPTIONS.contacts.limit
+//   } = { ...DEFAULT_FETCH_OPTIONS.contacts, ...options }
 
-  const fetchFullContactDetails = (contacts) =>
-    fetchFullDetails(contacts, (contact) =>
-      contactsAPI.get({
-        folder: contact.folder || contact.folder_id || folder,
-        id: contact.id
-      })
-    )
+//   const fetchFullContactDetails = (contacts) =>
+//     fetchFullDetails(contacts, (contact) =>
+//       contactsAPI.get({
+//         folder: contact.folder || contact.folder_id || folder,
+//         id: contact.id
+//       })
+//     )
 
-  try {
-    let contacts
+//   try {
+//     let contacts
 
-    if (searchQuery) {
-      contacts = await contactsAPI.advancedsearch(searchQuery, {
-        folders: folder ? [folder] : undefined,
-        limit: limit || 0
-      })
-      console.log(`👤 Found ${contacts.length} contacts matching "${searchQuery}"`)
-    } else {
-      contacts = await contactsAPI.getAll({
-        folder,
-        sort: '607',
-        order: 'asc'
-      })
-      console.log(`👤 Found ${contacts.length} contacts`)
-    }
+//     if (searchQuery) {
+//       contacts = await contactsAPI.advancedsearch(searchQuery, {
+//         folders: folder ? [folder] : undefined,
+//         limit: limit || 0
+//       })
+//       console.log(`👤 Found ${contacts.length} contacts matching "${searchQuery}"`)
+//     } else {
+//       contacts = await contactsAPI.getAll({
+//         folder,
+//         sort: '607',
+//         order: 'asc'
+//       })
+//       console.log(`👤 Found ${contacts.length} contacts`)
+//     }
 
-    const fullContacts = await fetchFullContactDetails(contacts)
-    const contactsData = fullContacts.map(toPlainObject)
+//     const fullContacts = await fetchFullContactDetails(contacts)
+//     const contactsData = fullContacts.map(toPlainObject)
 
-    contactsData.forEach((contact) => {
-      const contactInfo = transformContact(contact)
-      console.log('👤 Contact Data (Fields with values only):', contactInfo)
-    })
+//     contactsData.forEach((contact) => {
+//       const contactInfo = transformContact(contact)
+//       console.log('👤 Contact Data (Fields with values only):', contactInfo)
+//     })
 
-    return contactsData
-  } catch (error) {
-    console.error('❌ Failed to load contacts:', error)
-    throw error
-  }
-}
+//     return contactsData
+//   } catch (error) {
+//     console.error('❌ Failed to load contacts:', error)
+//     throw error
+//   }
+// }

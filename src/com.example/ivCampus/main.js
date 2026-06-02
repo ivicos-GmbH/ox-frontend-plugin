@@ -188,7 +188,7 @@ const setupWatchers = (iframe, userEmail, allData) => {
  * @param {jQuery} iframe - Iframe element
  */
 const handleIframeLoad = async (iframe) => {
-  console.log('📅 Iframe loaded')
+  // console.log('📅 Iframe loaded')
   const userEmail = ox.rampup.user?.email1
 
   try {
@@ -230,7 +230,7 @@ const handleIframeLoad = async (iframe) => {
 const updateIframeUrl = (iframe, baseUrl) => {
   const newUrl = buildIframeUrl(baseUrl)
   iframe.attr('src', newUrl)
-  console.log('🌐 Base URL changed, updating iframe src to:', newUrl)
+  // console.log('🌐 Base URL changed, updating iframe src to:', newUrl)
 }
 
 /**
@@ -264,11 +264,11 @@ const syncLanguageAfterReload = async (iframe) => {
 const setupSettingsListeners = (iframe) => {
   const settingsHandlers = {
     'change:baseUrl': (newBaseUrl) => updateIframeUrl(iframe, newBaseUrl),
-    'change:department': (newDepartment) => console.log('🏢 Department changed to:', newDepartment),
-    'change:notifications': (notificationsEnabled) => console.log('🔔 Notifications setting changed to:', notificationsEnabled),
+    // 'change:department': (newDepartment) => console.log('🏢 Department changed to:', newDepartment),
+    // 'change:notifications': (notificationsEnabled) => console.log('🔔 Notifications setting changed to:', notificationsEnabled),
     'change:autoRefresh': (refreshInterval) => startPolling(iframe, refreshInterval),
     'change:profileUpdateTrigger': () => {
-      console.log('📝 Profile update triggered from settings pane')
+      // console.log('📝 Profile update triggered from settings pane')
       const userEmail = ox.rampup.user?.email1
       if (userEmail) handleProfileUpdate(userEmail, iframe)
     }
@@ -302,13 +302,13 @@ const setupMessageListener = (iframe) => {
 
     // Handle navigation requests
     if (event.data && (event.data.type === 'ox-open-item' || event.data.type === 'ox-add-item')) {
-      console.log('🔗 Navigation request received:', event.data.request)
+      // console.log('🔗 Navigation request received:', event.data.request)
       handleNavigation(event.data)
     }
   }
 
   window.addEventListener('message', handleMessage)
-  console.log('👂 Message listener set up for navigation requests')
+  // console.log('👂 Message listener set up for navigation requests')
 }
 
 app.setLauncher(() => {
@@ -325,7 +325,7 @@ app.setLauncher(() => {
   syncLanguageAfterReload(iframe)
 
   userApi.on('update', () => {
-    console.log('User update event detected')
+    // console.log('User update event detected')
     const userEmail = ox.rampup.user?.email1
     if (userEmail) handleProfileUpdate(userEmail, iframe)
   })

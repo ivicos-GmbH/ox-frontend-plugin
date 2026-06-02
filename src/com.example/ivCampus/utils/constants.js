@@ -21,6 +21,11 @@ export const PRIORITY_MAP = {
   3: 'High'
 }
 
+// OX mail column IDs for getAll — explicitly declared to avoid relying on http.defaultColumns
+// 600 = id, 601 = folder_id, 602 = attachment, 603 = from, 607 = to, 610 = cc,
+// 611 = subject, 614 = flags, 652 = received_date, 656 = sent_date, 661 = date
+export const MAIL_LIST_COLUMNS = '600,601,602,603,607,610,611,614,652,656,661'
+
 // Default Fetch Options
 export const DEFAULT_FETCH_OPTIONS = {
   mail: {

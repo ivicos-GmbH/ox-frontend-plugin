@@ -126,7 +126,7 @@ export const watchForDataChanges = (apiEndpoint, options = {}) => {
 
     const createdItem = await apiEndpoint.get({ folder: itemFolder, id: itemId })
     const createdItemData = typeof createdItem.toJSON === 'function' ? createdItem.toJSON() : createdItem
-    console.log(`📦 Fetched created ${dataType} item:`, createdItemData)
+    // console.log(`📦 Fetched created ${dataType} item:`, createdItemData)
 
     if (dataType === 'tasks') {
       const plainTask = toPlainObject(createdItemData)
@@ -168,10 +168,10 @@ export const watchForDataChanges = (apiEndpoint, options = {}) => {
 
     if (iframe) {
       sendOxDataToIframe(iframe, { ...allData })
-      const tasksCount = allData.tasks?.all?.length || 0
-      const appointmentsCount = allData.appointments?.length || 0
-      const mailsCount = allData.mails?.length || 0
-      console.log(`➕ Added created ${dataType} item to iframe data: ${tasksCount} tasks, ${appointmentsCount} appointments, ${mailsCount} mails`)
+      // const tasksCount = allData.tasks?.all?.length || 0
+      // const appointmentsCount = allData.appointments?.length || 0
+      // const mailsCount = allData.mails?.length || 0
+      // console.log(`➕ Added created ${dataType} item to iframe data: ${tasksCount} tasks, ${appointmentsCount} appointments, ${mailsCount} mails`)
     }
   }
 
@@ -180,7 +180,7 @@ export const watchForDataChanges = (apiEndpoint, options = {}) => {
     let updatedData = await fetchFunction(apiEndpoint, fetchOptions)
     updatedData = removeRecentlyDeletedMails(updatedData)
 
-    console.log(`✅ Refetched ${dataType || 'data'}:`, updatedData?.length || 'N/A')
+    // console.log(`✅ Refetched ${dataType || 'data'}:`, updatedData?.length || 'N/A')
 
     if (!iframe) {
       console.warn('⚠️ No iframe provided, skipping postMessage')
@@ -198,14 +198,14 @@ export const watchForDataChanges = (apiEndpoint, options = {}) => {
     }
 
     sendOxDataToIframe(iframe, { ...allData })
-    const tasksCount = allData.tasks?.all?.length || 0
-    const appointmentsCount = allData.appointments?.length || 0
-    const mailsCount = allData.mails?.length || 0
-    console.log(`📤 Sent updated ${dataType} data to iframe via postMessage: ${tasksCount} tasks, ${appointmentsCount} appointments, ${mailsCount} mails`)
+    // const tasksCount = allData.tasks?.all?.length || 0
+    // const appointmentsCount = allData.appointments?.length || 0
+    // const mailsCount = allData.mails?.length || 0
+    // console.log(`📤 Sent updated ${dataType} data to iframe via postMessage: ${tasksCount} tasks, ${appointmentsCount} appointments, ${mailsCount} mails`)
   }
 
   const handleChange = async (event, data) => {
-    console.log(`📊 ${dataType || 'Data'} ${event} event detected`, data)
+    // console.log(`📊 ${dataType || 'Data'} ${event} event detected`, data)
 
     try {
       if (event === 'create') {
@@ -244,11 +244,11 @@ export const watchForDataChanges = (apiEndpoint, options = {}) => {
       rememberDeletedMails(deletedMails)
       allData.mails = removeRecentlyDeletedMails(allData.mails || [])
       if (iframe) sendOxDataToIframe(iframe, { ...allData })
-      console.log(`📤 Removed ${deletedMails?.length || 0} deleted mails from iframe data`)
+      // console.log(`📤 Removed ${deletedMails?.length || 0} deleted mails from iframe data`)
     })
   }
 
-  console.log(`👂 Watching for ${dataType || 'data'} changes`)
+  // console.log(`👂 Watching for ${dataType || 'data'} changes`)
 
   return () => {
     if (typeof apiEndpoint.off !== 'function') return
