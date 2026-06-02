@@ -111,7 +111,8 @@ const stopPolling = () => {
 
 const startPolling = (iframe, intervalSeconds) => {
   stopPolling()
-  const ms = Math.max(MIN_POLL_INTERVAL_MS, (intervalSeconds || 30) * 1000)
+  if (intervalSeconds === 0 || intervalSeconds == null) return  // 0 = disabled
+  const ms = Math.max(MIN_POLL_INTERVAL_MS, intervalSeconds * 1000)
   pollIntervalId = setInterval(async () => {
     try {
       const results = await fetchAllData()
@@ -235,12 +236,15 @@ const updateIframeUrl = (iframe, baseUrl) => {
 
 /**
  * Mark language sync as pending until OX applies the new language after reload.
+ * @returns {Function} Cleanup function
  */
 const setupLanguageListener = () => {
-  coreSettings.on('change', (attr) => {
+  const handler = (attr) => {
     if (attr !== 'language') return
     sessionStorage.setItem(PENDING_LANGUAGE_SYNC_KEY, 'true')
-  })
+  }
+  coreSettings.on('change', handler)
+  return () => coreSettings.off('change', handler)
 }
 
 /**
@@ -260,6 +264,7 @@ const syncLanguageAfterReload = async (iframe) => {
 /**
  * Setup settings change listeners
  * @param {jQuery} iframe - Iframe element
+ * @returns {Function} Cleanup function
  */
 const setupSettingsListeners = (iframe) => {
   const settingsHandlers = {
@@ -277,11 +282,18 @@ const setupSettingsListeners = (iframe) => {
   Object.entries(settingsHandlers).forEach(([event, handler]) => {
     settings.on(event, handler)
   })
+
+  return () => {
+    Object.entries(settingsHandlers).forEach(([event, handler]) => {
+      settings.off(event, handler)
+    })
+  }
 }
 
 /**
  * Setup message listener for navigation requests from iframe
  * @param {jQuery} iframe - Iframe element
+ * @returns {Function} Cleanup function
  */
 const setupMessageListener = (iframe) => {
   const handleMessage = (event) => {
@@ -309,6 +321,7 @@ const setupMessageListener = (iframe) => {
 
   window.addEventListener('message', handleMessage)
   console.log('👂 Message listener set up for navigation requests')
+  return () => window.removeEventListener('message', handleMessage)
 }
 
 app.setLauncher(() => {
@@ -319,19 +332,32 @@ app.setLauncher(() => {
   const iframe = createIframe(buildIframeUrl(baseUrl))
 
   iframe.on('load', () => handleIframeLoad(iframe))
-  setupSettingsListeners(iframe)
-  setupLanguageListener()
-  setupMessageListener(iframe)
+  const cleanupSettingsListeners = setupSettingsListeners(iframe)
+  const cleanupLanguageListener = setupLanguageListener()
+  const cleanupMessageListener = setupMessageListener(iframe)
   syncLanguageAfterReload(iframe)
 
-  userApi.on('update', () => {
+  const handleUserUpdate = () => {
     console.log('User update event detected')
     const userEmail = ox.rampup.user?.email1
     if (userEmail) handleProfileUpdate(userEmail, iframe)
-  })
+  }
+  userApi.on('update', handleUserUpdate)
 
   appWindow.nodes.main.append(iframe)
   appWindow.show()
+
+  app.quit = () => {
+    cleanupMessageListener()
+    cleanupSettingsListeners()
+    cleanupLanguageListener()
+    userApi.off('update', handleUserUpdate)
+    stopPolling()
+    if (cleanupDataWatchers) {
+      cleanupDataWatchers()
+      cleanupDataWatchers = null
+    }
+  }
 })
 
 export default {
