@@ -243,7 +243,7 @@ export const transformContact = (contactData) => {
   addField('assistantName', contactData.assistant_name)
 
   // Email fields
-  addField('email1', contactData.email1 || contactData[501])
+  addField('email1', contactData.email1 ?? null)
   addField('email2', contactData.email2)
   addField('email3', contactData.email3)
 

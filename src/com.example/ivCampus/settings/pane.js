@@ -7,6 +7,8 @@ import ExtensibleView from '$/io.ox/backbone/views/extensible'
 import { settings } from '../settings'
 import './style.css'
 
+const PROFILE_BTN_LABEL = 'Update ivCAMPUS Profile'
+
 ext.point('app.ivicos-campus/ivCampus/settings/detail').extend({
   id: 'view',
   index: 100,
@@ -62,17 +64,18 @@ ext.point('app.ivicos-campus/ivCampus/settings/detail/view').extend({
       .addClass('form-control')
       .val(settings.get('autoRefresh'))
       .on('change', (e) => {
-        settings.set('autoRefresh', parseInt(e.target.value))
-        console.log('⏰ Auto refresh changed to:', e.target.value, 'seconds')
+        const value = parseInt(e.target.value, 10)
+        if (!isNaN(value) && value >= 0) {
+          settings.set('autoRefresh', value)
+          console.log('⏰ Auto refresh changed to:', value, 'seconds')
+        }
       })
 
     const updateProfileButton = $('<button>')
       .addClass('btn btn-primary')
-      .text('Update ivCAMPUS Profile')
+      .text(PROFILE_BTN_LABEL)
       .on('click', function () {
         const $btn = $(this)
-        const originalText = 'Update ivCAMPUS Profile'
-        const updatedText = 'Updated!'
 
         // Disable button and show updating state
         $btn.prop('disabled', true)
@@ -84,18 +87,12 @@ ext.point('app.ivicos-campus/ivCampus/settings/detail/view').extend({
         settings.set('profileUpdateTrigger', currentValue + 1)
         console.log('📝 Update ivCAMPUS Profile button clicked')
 
-        // After a short delay, show "Updated!" then revert
+        // Restore button after 5 seconds regardless of outcome
         setTimeout(() => {
-          $btn.text(updatedText)
-          $btn.removeClass('updating').addClass('updated')
-
-          // Revert to original state after 5 minutes (300000 ms)
-          setTimeout(() => {
-            $btn.text(originalText)
-            $btn.removeClass('updated')
-            $btn.prop('disabled', false)
-          }, 300000)
-        }, 500)
+          $btn.text(PROFILE_BTN_LABEL)
+          $btn.removeClass('updating')
+          $btn.prop('disabled', false)
+        }, 5000)
       })
 
     this.$el.addClass('ivcampus-settings')

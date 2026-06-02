@@ -61,17 +61,18 @@ export const openAppointment = async (appointmentId, folderId, cid) => {
   }
 }
 
-export const addAppointment = async () => {
+export const addAppointment = async (request = {}) => {
   try {
-    ox.load(() => import('$/io.ox/calendar/edit/main')).then(async ({ default: edit }) => {
-      const app = edit.getApp()
-      await app.launch()
-      app.create(new calendarModel.Model({
-        title: 'Meeting',
-        startDate: Date.now(),
-        endDate: Date.now() + 3600000
-      }))
-    })
+    const { default: edit } = await ox.load(() => import('$/io.ox/calendar/edit/main'))
+    const app = edit.getApp()
+    await app.launch()
+    const now = Date.now()
+    app.create(new calendarModel.Model({
+      title: request.title || '',
+      startDate: request.startDate || now,
+      endDate: request.endDate || now + 3600000,
+      note: request.description || undefined
+    }))
   } catch (error) {
     console.error('❌ Failed to create appointment:', error)
     throw error
@@ -87,7 +88,7 @@ export const addAppointment = async () => {
 function getTaskCid (taskId, folderId) {
   if (!folderId) throw new Error('Folder ID is required for tasks')
   const id = String(taskId || '').replace(/\//, '.')
-  return id.indexOf('.') > -1 ? id : _.cid({ folder: folderId, id })
+  return id.indexOf('.') > -1 ? id : `${folderId}.${id}`
 }
 
 /**
@@ -126,17 +127,17 @@ export const openTask = async (taskId, folderId) => {
   }
 }
 
-export const addTask = async () => {
+export const addTask = async (request = {}) => {
   try {
-    ox.load(() => import('$/io.ox/tasks/edit/main')).then(({ default: edit }) => {
-      const app = edit.getApp()
-      app.launch({
-        taskData: {
-          title: 'My task',
-          note: 'Task description',
-          folder_id: coreSettings.get('folder/tasks')
-        }
-      })
+    const { default: edit } = await ox.load(() => import('$/io.ox/tasks/edit/main'))
+    const app = edit.getApp()
+    app.launch({
+      taskData: {
+        title: request.title || '',
+        note: request.note || '',
+        folder_id: coreSettings.get('folder/tasks'),
+        end_time: request.dueDate || undefined
+      }
     })
   } catch (error) {
     console.error('❌ Failed to add task:', error)
@@ -202,12 +203,12 @@ export const openMail = async (mailId, folderId) => {
   }
 }
 
-export const addMail = async () => {
+export const addMail = async (request = {}) => {
   try {
     registry.call('io.ox/mail/compose', 'open', {
-      to: [['', 'recipient@example.com']],
-      subject: 'Subject',
-      body: 'Email body'
+      to: request.to ? [['', request.to]] : [],
+      subject: request.subject || '',
+      body: request.body || ''
     })
   } catch (error) {
     console.error('❌ Failed to add mail:', error)
@@ -246,15 +247,15 @@ export const handleNavigation = (data) => {
       case 'appointment':
         return openAppointment(request.id, request.folder, request.cid)
       case 'add-appointment':
-        return addAppointment()
+        return addAppointment(request)
       case 'task':
         return openTask(request.id, request.folder)
       case 'add-task':
-        return addTask()
+        return addTask(request)
       case 'mail':
         return openMail(request.id, request.folder)
       case 'add-mail':
-        return addMail()
+        return addMail(request)
       default:
         console.warn('⚠️ Unknown navigation type:', request.type)
     }
