@@ -1,7 +1,7 @@
 /* eslint-disable license-header/header */
 
 import { getGabId } from '$/io.ox/contacts/util'
-import { toPlainObject, fetchFullDetails, transformMail, transformTask, transformContact } from './data-transformers'
+import { toPlainObject, fetchFullDetails, transformMail, transformTask } from './data-transformers'
 import { getTodayRange, overlapsToday } from './date-helpers'
 import { DEFAULT_FETCH_OPTIONS } from './constants'
 import http from '$/io.ox/core/http'
@@ -32,7 +32,6 @@ export const fetchCalendarAppointments = (calendarApi) => {
     .then((fullAppointments) => {
       const appointments = fullAppointments.map((model) => {
         const appointment = model.toJSON()
-        console.log('📅 Full Appointment Details:', appointment)
         return appointment
       })
       return appointments
@@ -73,7 +72,6 @@ export const fetchMailMessages = async (mailApi, options = {}) => {
   const deletedFlag = mailApi.FLAGS?.DELETED ?? 2
 
   console.log('📧 Total mails:', mails.length)
-  console.log('📧 Mails:', mails)
   // if you still want "today only"
   const { start, end } = getTodayRange()
   const todayMails = mails
@@ -93,7 +91,6 @@ export const fetchMailMessages = async (mailApi, options = {}) => {
   const transformed = todayMails.map((m) => transformMail(m))
 
   console.log('📧 Today mails:', transformed.length)
-  console.log('📧 Today mails:', transformed)
   return transformed
 }
 
@@ -226,7 +223,6 @@ export const fetchTasks = async (taskAPI, options = {}) => {
     })
 
     const tasksData = todayTasks.map(transformTask)
-    tasksData.forEach((task) => console.log('✅ Task Details (Fields with values only):', task))
 
     return tasksData
   } catch (error) {
@@ -280,11 +276,6 @@ export const fetchContacts = async (contactsAPI, options = {}) => {
 
     const fullContacts = await fetchFullContactDetails(contacts)
     const contactsData = fullContacts.map(toPlainObject)
-
-    contactsData.forEach((contact) => {
-      const contactInfo = transformContact(contact)
-      console.log('👤 Contact Data (Fields with values only):', contactInfo)
-    })
 
     return contactsData
   } catch (error) {

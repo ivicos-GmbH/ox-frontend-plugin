@@ -133,7 +133,6 @@ export const watchForDataChanges = (apiEndpoint, options = {}) => {
       return
     }
     const createdItemData = typeof createdItem.toJSON === 'function' ? createdItem.toJSON() : createdItem
-    console.log(`📦 Fetched created ${dataType} item:`, createdItemData)
 
     if (dataType === 'tasks') {
       const plainTask = toPlainObject(createdItemData)
@@ -212,8 +211,6 @@ export const watchForDataChanges = (apiEndpoint, options = {}) => {
   }
 
   const handleChange = async (event, data) => {
-    console.log(`📊 ${dataType || 'Data'} ${event} event detected`, data)
-
     try {
       if (event === 'create') {
         await handleCreate(data)
