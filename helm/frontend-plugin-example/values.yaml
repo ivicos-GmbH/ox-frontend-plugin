@@ -4,28 +4,29 @@
 
 replicaCount: 1
 
-defaultRegistry: registry.gitlab.open-xchange.com
+defaultRegistry: ivicosregistry.cr.de-fra.ionos.com
 
 image:
-  repository: appsuite/web-foundation/frontend-plugin-example
+  repository: iv-campus/ox-frontend-plugin
   pullPolicy: IfNotPresent
+  # Overwritten to the release tag in CI before helm package; bump manually if packaging locally.
+  tag: "1.0.0"
 
-imagePullSecrets: []
+imagePullSecrets:
+  - name: ionosrepokey
 nameOverride: ""
 fullnameOverride: ""
 
-podAnnotations: {}
+# Optional pod annotations (add keys here). To enable, restore the annotations block in templates/deployment.yaml.
+# podAnnotations:
+#   example.io/metric: "true"
 
-podSecurityContext: {}
-
-defaultPodSecurityContext:
+podSecurityContext:
   runAsNonRoot: true
   runAsUser: 1000
   runAsGroup: 1000
 
-securityContext: {}
-
-defaultSecurityContext:
+securityContext:
   runAsNonRoot: true
   runAsUser: 1000
   runAsGroup: 1000

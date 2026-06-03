@@ -1,9 +1,9 @@
 apiVersion: v1
 kind: Service
 metadata:
-  name: {{ include "ox-common.names.fullname" . }}
+  name: {{ include "frontend-plugin-example.fullname" . }}
   labels:
-    {{- include "ox-common.labels.standard" . | nindent 4 }}
+    {{- include "frontend-plugin-example.labels" . | nindent 4 }}
 spec:
   type: {{ .Values.service.type }}
   ports:
@@ -12,4 +12,4 @@ spec:
       protocol: TCP
       name: http
   selector:
-    {{- include "ox-common.labels.matchLabels" . | nindent 4 }}
+    {{- include "frontend-plugin-example.selectorLabels" . | nindent 4 }}

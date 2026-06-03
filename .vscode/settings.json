@@ -17,6 +17,9 @@
     }
   ],
   "yaml.customTags": [ "!reference sequence" ],
+  "files.associations": {
+    "**/helm/**/templates/*.yaml": "helm"
+  },
   "css.validate": false,
   "less.validate": false,
   "scss.validate": false,

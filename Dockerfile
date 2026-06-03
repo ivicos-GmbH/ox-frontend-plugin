@@ -2,7 +2,7 @@ FROM registry.gitlab.com/openxchange/appsuite/web-foundation/base-images/node_bu
 
 WORKDIR /app
 COPY . /app
-RUN pnpm i -s
+RUN pnpm install --frozen-lockfile
 
 ARG APP_VERSION
 ARG BUILD_TIMESTAMP

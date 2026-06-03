@@ -1,24 +1,40 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: {{ include "ox-common.names.fullname" . }}
+  name: {{ include "frontend-plugin-example.fullname" . }}
   labels:
-    {{- include "ox-common.labels.standard" . | nindent 4 }}
+    helm.sh/chart: {{ include "frontend-plugin-example.chart" . }}
+    app.kubernetes.io/name: {{ include "frontend-plugin-example.name" . }}
+    app.kubernetes.io/instance: {{ .Release.Name }}
+    app.kubernetes.io/version: {{ .Chart.AppVersion | quote }}
+    app.kubernetes.io/managed-by: {{ .Release.Service }}
 spec:
   replicas: {{ .Values.replicaCount }}
   selector:
     matchLabels:
-      {{- include "ox-common.labels.matchLabels" . | nindent 6 }}
+      app.kubernetes.io/name: {{ include "frontend-plugin-example.name" . }}
+      app.kubernetes.io/instance: {{ .Release.Name }}
   template:
     metadata:
-      annotations: {{ toYaml .Values.podAnnotations | nindent 8 }}
       labels:
-        {{- include "ox-common.labels.standard" . | nindent 8 }}
-    spec: {{ include "ox-common.pods.podSpec" (dict "podRoot" .Values "global" $ "context" . ) | nindent 6 }}
+        app.kubernetes.io/name: {{ include "frontend-plugin-example.name" . }}
+        app.kubernetes.io/instance: {{ .Release.Name }}
+    spec:
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.podSecurityContext }}
+      securityContext:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
       containers:
         - name: main
-          securityContext: {{ toYaml .Values.securityContext | nindent 12 }}
-          image: {{ include "ox-common.images.image" (dict "imageRoot" .Values.image "global" $ "context" . ) }}
+          {{- with .Values.securityContext }}
+          securityContext:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          image: "{{ .Values.defaultRegistry }}/{{ .Values.image.repository }}:{{ .Values.image.tag }}"
           imagePullPolicy: {{ .Values.image.pullPolicy }}
           ports:
             - name: http
@@ -34,8 +50,8 @@ spec:
           {{- if .Values.probe.readiness.enabled }}
           readinessProbe:
             httpGet:
-                path: /
-                port: {{ .Values.containerPort }}
+              path: /
+              port: {{ .Values.containerPort }}
             {{- omit .Values.probe.readiness "enabled" | toYaml | nindent 12 }}
           {{- end }}
           resources:

@@ -11,6 +11,9 @@ import { API_CONFIG } from './constants'
 export const handleProfileUpdate = async (email, iframe) => {
   try {
     const response = await fetch(`${API_CONFIG.profileUpdate}?email=${email}`)
+    if (!response.ok) {
+      throw new Error(`Profile update failed: HTTP ${response.status}`)
+    }
     const data = await response.json()
     if (data.success) {
       const currentSrc = iframe.attr('src')

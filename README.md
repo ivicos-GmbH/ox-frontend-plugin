@@ -61,9 +61,12 @@ For dynamic loading local and external modules have to be distinguished by using
 - Override translations of `io.ox/core` dictionary with custom values. In this case, we change the name of the Portal app.
 - [Sources](src/com.example/custom-i18n)
 
-## Build, publish and deploy
+### Original Open-Xchange Reference
 
-### .gitlab-ci
+<details>
+<summary>Click to expand (for reference only)</summary>
+
+#### .gitlab-ci
 
 - We use our ci-building-blocks project for all jobs
 - For this we need to specify some variables in your gitlab projects settings
@@ -77,9 +80,11 @@ For dynamic loading local and external modules have to be distinguished by using
   - [frontend/charts/frontend-plugin-example](https://registry.cloud.oxoe.io/harbor/projects/47/repositories/charts%2Ffrontend-plugin-example)
 - Live deployment at <https://frontend-plugin-example-main.dev.oxui.de/appsuite/>
 
-### Manual
+#### Manual
 
 ```sh
 cd helm
 helm install/upgrade -f frontend-plugin-example/values.yaml -f values/manual.yaml plugin-example ./frontend-plugin-example
 ```
+
+</details>
