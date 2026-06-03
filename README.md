@@ -61,20 +61,6 @@ For dynamic loading local and external modules have to be distinguished by using
 - Override translations of `io.ox/core` dictionary with custom values. In this case, we change the name of the Portal app.
 - [Sources](src/com.example/custom-i18n)
 
-## Build, publish and deploy
-
-### 🚀 For ivCAMPUS Production Deployment
-
-**Quick Start:**
-- **New?** Read [`START-HERE.md`](START-HERE.md) (GitHub users)
-- **Need checklist?** See [`GITHUB-QUICKSTART.md`](GITHUB-QUICKSTART.md)
-
-**Complete Documentation:**
-- **Setup automation:** [`docs/GITHUB-CI-SETUP.md`](docs/GITHUB-CI-SETUP.md) (15 min one-time setup)
-- **Release process:** [`docs/AUTOMATED-RELEASE-GUIDE.md`](docs/AUTOMATED-RELEASE-GUIDE.md) (5 min per release)
-- **Manual process:** [`docs/PRODUCTION-DEPLOYMENT-GUIDE.md`](docs/PRODUCTION-DEPLOYMENT-GUIDE.md) (full guide)
-- **All docs:** [`docs/README.md`](docs/README.md)
-
 ### Original Open-Xchange Reference
 
 <details>

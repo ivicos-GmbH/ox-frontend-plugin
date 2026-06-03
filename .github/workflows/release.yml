@@ -44,7 +44,7 @@ jobs:
         uses: docker/build-push-action@v6
         with:
           context: .
-          platforms: linux/amd64
+          platforms: linux/amd64,linux/arm64
           push: true
           tags: |
             ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ steps.version.outputs.version }}
@@ -124,23 +124,9 @@ jobs:
           oci://${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:$VERSION
           \`\`\`
 
-          Installers need registry credentials for \`${{ env.REGISTRY }}\` (imagePullSecret).
-
           ### Helm chart
 
-          Attached: \`ivcampus-plugin-$VERSION.tgz\` (+ \`.sha256\`).
-
-          \`\`\`bash
-          helm install ivcampus-plugin ./ivcampus-plugin-$VERSION.tgz \\
-            --namespace ox-suite \\
-            --set imagePullSecrets[0].name=ionos-registry-credentials
-          \`\`\`
-
-          Default image in the chart: \`${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:$VERSION\`
-
-          ### Documentation
-
-          - [Production Deployment Guide](docs/PRODUCTION-DEPLOYMENT-GUIDE.md)
+          Attached: \`ivcampus-plugin-$VERSION.tgz\`
           EOF
 
       - name: Create Release
