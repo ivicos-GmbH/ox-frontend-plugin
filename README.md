@@ -63,7 +63,24 @@ For dynamic loading local and external modules have to be distinguished by using
 
 ## Build, publish and deploy
 
-### .gitlab-ci
+### 🚀 For ivCAMPUS Production Deployment
+
+**Quick Start:**
+- **New?** Read [`START-HERE.md`](START-HERE.md) (GitHub users)
+- **Need checklist?** See [`GITHUB-QUICKSTART.md`](GITHUB-QUICKSTART.md)
+
+**Complete Documentation:**
+- **Setup automation:** [`docs/GITHUB-CI-SETUP.md`](docs/GITHUB-CI-SETUP.md) (15 min one-time setup)
+- **Release process:** [`docs/AUTOMATED-RELEASE-GUIDE.md`](docs/AUTOMATED-RELEASE-GUIDE.md) (5 min per release)
+- **Manual process:** [`docs/PRODUCTION-DEPLOYMENT-GUIDE.md`](docs/PRODUCTION-DEPLOYMENT-GUIDE.md) (full guide)
+- **All docs:** [`docs/README.md`](docs/README.md)
+
+### Original Open-Xchange Reference
+
+<details>
+<summary>Click to expand (for reference only)</summary>
+
+#### .gitlab-ci
 
 - We use our ci-building-blocks project for all jobs
 - For this we need to specify some variables in your gitlab projects settings
@@ -77,9 +94,11 @@ For dynamic loading local and external modules have to be distinguished by using
   - [frontend/charts/frontend-plugin-example](https://registry.cloud.oxoe.io/harbor/projects/47/repositories/charts%2Ffrontend-plugin-example)
 - Live deployment at <https://frontend-plugin-example-main.dev.oxui.de/appsuite/>
 
-### Manual
+#### Manual
 
 ```sh
 cd helm
 helm install/upgrade -f frontend-plugin-example/values.yaml -f values/manual.yaml plugin-example ./frontend-plugin-example
 ```
+
+</details>
