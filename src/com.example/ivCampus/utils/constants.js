@@ -1,9 +1,9 @@
 /* eslint-disable license-header/header */
 
-// API Configuration
-export const API_CONFIG = {
-  profileUpdate: 'https://api-de-eu.ivicos-campus.app/beta/idp/ox-iframe-login/v1/me/ox_oidc/get_updated_ox_user',
-  backendSync: 'https://api-de-eu.ivicos-campus.app/beta/idp/ox-iframe-login/v1/me/ox_oidc/fetch_ox_data'
+// API paths, resolved against the apiBaseUrl setting at call time (see utils/backend.js)
+export const API_PATHS = {
+  profileUpdate: '/v1/me/ox_oidc/get_updated_ox_user',
+  backendSync: '/v1/me/ox_oidc/fetch_ox_data'
 }
 
 // Status and Priority Mappings
