@@ -2,11 +2,17 @@
 
 import { Settings } from '$/io.ox/core/settings'
 
+// Defaults only, and deliberately pointing at staging. The middleware's jslob overrides anything
+// set in a properties file, so a production deployment supplies its own values:
+//   /opt/open-xchange/etc/settings/ivcampus.properties
+//   app.ivicos-campus/ivCampus//baseUrl=https://<campus-origin>/ox/auth?tenant=<id>
+//   app.ivicos-campus/ivCampus//apiBaseUrl=https://<api-origin>/v1/idp
+//
+// The beta gateway requires a branch segment; 'default' targets the canonical beta
+// identity-provider rather than a per-branch deployment, which is removed when its PR closes.
 export const settings = new Settings('app.ivicos-campus/ivCampus', () => ({
   baseUrl: 'https://campus-alpha-client-git-ox-iframe-login-ivicos.vercel.app/ox/auth',
-  oidcIssuer: 'https://sso-ivicos.demo.open-xchange.com/realms/oxlab',
-  oidcClientId: 'ivCampus',
-  oidcRedirectUri: 'https://campus-alpha-client-git-ox-iframe-login-ivicos.vercel.app/ox/auth/callback',
+  apiBaseUrl: 'https://api-de-eu.ivicos-campus.app/beta/idp/default',
   department: 'IT',
   notifications: true,
   autoRefresh: 30,

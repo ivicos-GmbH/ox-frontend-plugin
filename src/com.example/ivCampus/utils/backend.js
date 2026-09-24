@@ -1,6 +1,19 @@
 /* eslint-disable license-header/header */
 
-import { API_CONFIG } from './constants'
+import { settings } from '../settings'
+import { API_PATHS } from './constants'
+
+/**
+ * Build an absolute API URL from the apiBaseUrl setting.
+ *
+ * Read at call time, never at module scope: the jslob is fetched asynchronously during rampup,
+ * so a top-level read can run before the server's value arrives and would silently bake in the
+ * compiled default.
+ *
+ * @param {string} path - Path from API_PATHS
+ * @returns {string}
+ */
+const apiUrl = (path) => `${(settings.get('apiBaseUrl') || '').replace(/\/$/, '')}${path}`
 
 /**
  * Handle profile update by calling backend API
@@ -10,7 +23,7 @@ import { API_CONFIG } from './constants'
  */
 export const handleProfileUpdate = async (email, iframe) => {
   try {
-    const response = await fetch(`${API_CONFIG.profileUpdate}?email=${email}`)
+    const response = await fetch(`${apiUrl(API_PATHS.profileUpdate)}?email=${encodeURIComponent(email)}`)
     if (!response.ok) {
       throw new Error(`Profile update failed: HTTP ${response.status}`)
     }
@@ -39,7 +52,7 @@ export const handleProfileUpdate = async (email, iframe) => {
  */
 // export const sendDataToBackend = async (data, email) => {
 //   try {
-//     const response = await fetch(API_CONFIG.backendSync, {
+//     const response = await fetch(apiUrl(API_PATHS.backendSync), {
 //       method: 'POST',
 //       headers: {
 //         'Content-Type': 'application/json'

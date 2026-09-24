@@ -10,7 +10,7 @@ image:
   repository: iv-campus/ox-frontend-plugin
   pullPolicy: IfNotPresent
   # Overwritten to the release tag in CI before helm package; bump manually if packaging locally.
-  tag: "1.0.0"
+  tag: "1.1.0"
 
 imagePullSecrets:
   - name: ionosrepokey
